@@ -6,6 +6,7 @@ import {
     Field,
     Flex,
     Heading,
+    IconButton,
     Input,
     Stack,
     Switch,
@@ -13,7 +14,7 @@ import {
     Tooltip,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import { LuExternalLink, LuInfo, LuSettings } from "react-icons/lu";
+import { LuDownload, LuExternalLink, LuInfo, LuSettings, LuUpload } from "react-icons/lu";
 import { useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import type { ConfigStore } from "../providers/store";
 import { OverlayIconButton } from "./OverlayIconButton";
@@ -26,14 +27,14 @@ import { OverlayIconButton } from "./OverlayIconButton";
  * which helps users find correct obfuscated packet names by recording
  * live Dofus traffic and replaying it synchronized with a screen capture.
  */
-export const ConfigButton = () => {
+export const ConfigButton = ({ onOpenViewer }: { onOpenViewer?: () => void }) => {
     const [open, setOpen] = useState(false);
     return (
         <>
             <OverlayIconButton aria-label="Configuration" bottom="96px" left="8px" onClick={() => setOpen(true)}>
                 <LuSettings />
             </OverlayIconButton>
-            <ConfigModal open={open} onClose={() => setOpen(false)} />
+            <ConfigModal open={open} onClose={() => setOpen(false)} onOpenViewer={onOpenViewer} />
         </>
     );
 };
@@ -45,7 +46,7 @@ const MAPPING_HELP: Record<keyof ConfigStore["mappings"], string> = {
         "The field key inside that packet's JSON data that contains the map ID. Example: \"mapId\" or \"a\".",
 };
 
-const ConfigModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+const ConfigModal = ({ open, onClose, onOpenViewer }: { open: boolean; onClose: () => void; onOpenViewer?: () => void }) => {
     const mappings = useMappings();
     const config = useConfig();
     const updateConfig = useUpdateConfigMutation();
@@ -63,8 +64,41 @@ const ConfigModal = ({ open, onClose }: { open: boolean; onClose: () => void }) 
         onClose();
     };
 
-    const openViewer = async () => {
-        await window.api.openViewerWindow();
+    const handleExport = () => {
+        const filtered = Object.fromEntries(Object.entries(draft).filter(([, v]) => v != null));
+        const blob = new Blob([JSON.stringify(filtered, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "dofus-mappings.json";
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleImport = () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json,application/json";
+        input.onchange = () => {
+            const file = input.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const parsed = JSON.parse(e.target?.result as string);
+                    setDraft((d) => ({ ...d, ...Object.fromEntries(
+                        Object.entries(parsed).filter(([k]) => k in d)
+                    ) }));
+                } catch { /* ignore invalid JSON */ }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
+
+    const openViewer = () => {
+        onClose();
+        onOpenViewer?.();
     };
 
     return (
@@ -95,9 +129,19 @@ const ConfigModal = ({ open, onClose }: { open: boolean; onClose: () => void }) 
                         <Stack gap={6}>
                             {/* Mappings section */}
                             <Box>
-                                <Heading size="sm" color="whiteAlpha.600" mb={4} textTransform="uppercase" letterSpacing="wider">
-                                    Packet Mappings
-                                </Heading>
+                                <Flex align="center" justify="space-between" mb={4}>
+                                    <Heading size="sm" color="whiteAlpha.600" textTransform="uppercase" letterSpacing="wider">
+                                        Packet Mappings
+                                    </Heading>
+                                    <Flex gap={1}>
+                                        <IconButton aria-label="Import mappings" size="xs" variant="ghost" onClick={handleImport}>
+                                            <LuUpload />
+                                        </IconButton>
+                                        <IconButton aria-label="Export mappings" size="xs" variant="ghost" onClick={handleExport}>
+                                            <LuDownload />
+                                        </IconButton>
+                                    </Flex>
+                                </Flex>
                                 <Stack gap={4}>
                                     {(Object.keys(draft) as Array<keyof ConfigStore["mappings"]>).map((key) => (
                                         <MappingField
