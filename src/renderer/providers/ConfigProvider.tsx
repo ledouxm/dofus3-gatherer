@@ -16,6 +16,7 @@ export const ConfigProvider = ({ children }: PropsWithChildren) => {
             configStore.set({
                 ...configStore.get(),
                 ...response,
+                cdnBaseUrl: response.cdnBaseUrl || import.meta.env.VITE_CDN_BASE_URL,
                 mappings: { ...configStore.get().mappings, ...response.mappings },
             });
 

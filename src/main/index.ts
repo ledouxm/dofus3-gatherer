@@ -148,7 +148,7 @@ app.whenReady().then(async () => {
 
     // Ensure config.json exists on first run
     const existingConfig = await readMainConfig(configDir);
-    await writeMainConfig(configDir, { cdnBaseUrl: "", ...existingConfig });
+    await writeMainConfig(configDir, { ...existingConfig, cdnBaseUrl: existingConfig.cdnBaseUrl || env.VITE_CDN_BASE_URL || "" });
 
     if (!existingConfig.cdnBaseUrl && !env.VITE_CDN_BASE_URL) {
         const { response } = await dialog.showMessageBox({
@@ -194,7 +194,7 @@ app.whenReady().then(async () => {
     });
     ipcMain.handle("get-recoltables", async (_event, resourceId: string) => {
         const config = await readMainConfig(configDir);
-        const cdnBaseUrl = config.cdnBaseUrl ?? env.VITE_CDN_BASE_URL;
+        const cdnBaseUrl = config.cdnBaseUrl || env.VITE_CDN_BASE_URL;
         if (!cdnBaseUrl) return null;
         const cached = await getCachedRecoltables(cacheDir, resourceId);
         if (cached) return cached;
