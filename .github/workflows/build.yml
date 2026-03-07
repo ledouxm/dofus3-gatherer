@@ -35,6 +35,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Set version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.version='${{ github.ref_name }}'.replace(/^v/,'');fs.writeFileSync('package.json',JSON.stringify(p,null,4))"
+
       - name: Build
         env:
           # Use workflow input if provided, otherwise fall back to repository variable
