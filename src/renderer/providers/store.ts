@@ -35,6 +35,7 @@ export type ConfigStore = {
     cdnBaseUrl?: string;
     selectedResourceIds?: number[];
     centerOnCharacter?: boolean;
+    copyCoordinatesOnClick?: boolean;
     characterPosition?: {
         position: [number, number];
         mapId: number;

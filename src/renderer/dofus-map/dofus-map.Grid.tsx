@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Polyline, useMapEvents } from "react-leaflet";
+import { useConfig } from "../providers/ConfigProvider";
+import { toaster } from "../ui/toaster";
 import {
     getCellDimensions,
     dofusToWorld,
@@ -56,31 +58,44 @@ export function MapGrid({ meta }: { meta: WorldmapMeta }) {
 
 export function CoordDisplay({ meta }: { meta: WorldmapMeta }) {
     const [coord, setCoord] = useState<DofusCoord | null>(null);
+    const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+    const config = useConfig();
+    const lastToastId = useRef<string | undefined>(undefined);
 
     useMapEvents({
         mousemove(e) {
             setCoord(worldToDofus({ x: e.latlng.lng, y: -e.latlng.lat }, meta));
+            setMousePos({ x: e.originalEvent.clientX, y: e.originalEvent.clientY });
         },
         mouseout() {
             setCoord(null);
+            setMousePos(null);
+        },
+        click(e) {
+            if (config.copyCoordinatesOnClick === false) return;
+            const c = worldToDofus({ x: e.latlng.lng, y: -e.latlng.lat }, meta);
+            const text = `/travel ${Math.floor(c.posX)} ${Math.floor(c.posY)}`;
+            navigator.clipboard.writeText(text);
+            if (lastToastId.current) toaster.dismiss(lastToastId.current);
+            lastToastId.current = toaster.create({ title: <>Copied: <b>{text}</b></>, type: "success", duration: 2000 });
         },
     });
 
-    if (!coord) return null;
+    if (!coord || !mousePos) return null;
 
     return (
         <div
             style={{
                 position: "fixed",
-                bottom: 16,
-                left: "50%",
-                transform: "translateX(-50%)",
+                left: mousePos.x + 14,
+                top: mousePos.y + 14,
                 zIndex: 1000,
                 background: "rgba(0,0,0,0.7)",
-                padding: "4px 12px",
-                borderRadius: 6,
+                padding: "2px 8px",
+                borderRadius: 4,
                 color: "#eee",
                 fontFamily: "monospace",
+                fontSize: 12,
                 pointerEvents: "none",
             }}
         >

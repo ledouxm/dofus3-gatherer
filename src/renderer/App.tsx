@@ -15,6 +15,7 @@ import { QuickActionsPanel } from "./ui/QuickActionsPanel";
 import { ViewerApp } from "./viewer/ViewerApp";
 import { Toaster, toaster } from "./ui/toaster";
 import { useUpdateCheck } from "./useUpdateCheck";
+import { CoordDisplay } from "./dofus-map/dofus-map.Grid";
 
 export function App() {
     const baseUrl = useBaseUrl();
@@ -48,6 +49,7 @@ export function App() {
                             <CharacterPosition meta={meta} />
                             <RecoltablesLayer meta={meta} />
                             <HintsLayer meta={meta} />
+                            <CoordDisplay meta={meta} />
                         </>
                     )}
                 </DofusLeafletMap>
@@ -59,12 +61,24 @@ export function App() {
             </div>
 
             {/* Actions tab */}
-            <div style={{ display: activeTab === "actions" ? "flex" : "none", flex: 1, overflow: "hidden" }}>
+            <div
+                style={{
+                    display: activeTab === "actions" ? "flex" : "none",
+                    flex: 1,
+                    overflow: "hidden",
+                }}
+            >
                 <QuickActionsPanel />
             </div>
 
             {/* Viewer tab */}
-            <div style={{ display: activeTab === "viewer" ? "flex" : "none", flex: 1, overflow: "hidden" }}>
+            <div
+                style={{
+                    display: activeTab === "viewer" ? "flex" : "none",
+                    flex: 1,
+                    overflow: "hidden",
+                }}
+            >
                 <ViewerApp />
             </div>
         </div>
