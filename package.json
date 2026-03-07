@@ -1,6 +1,6 @@
 {
     "name": "dofus3-gatherer",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "description": "",
     "main": "./out/main/index.js",
     "scripts": {
@@ -14,8 +14,16 @@
     "author": "",
     "license": "ISC",
     "pnpm": {
-        "onlyBuiltDependencies": ["esbuild", "electron", "protobufjs"],
-        "ignoredBuiltDependencies": ["better-sqlite3", "cap", "keysender"]
+        "onlyBuiltDependencies": [
+            "esbuild",
+            "electron",
+            "protobufjs"
+        ],
+        "ignoredBuiltDependencies": [
+            "better-sqlite3",
+            "cap",
+            "keysender"
+        ]
     },
     "packageManager": "pnpm@10.12.4",
     "devDependencies": {
