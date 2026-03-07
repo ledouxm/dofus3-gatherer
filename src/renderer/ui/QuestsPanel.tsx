@@ -48,25 +48,53 @@ async function searchDungeons(input: string): Promise<DungeonItem[]> {
 async function loadQuests(dungeonId: number) {
     const result = await db.executeQuery(
         sql<{ id: number; isEvent: number | null; name: string }>`
+            WITH dungeon_maps AS (
+                SELECT target_id AS mapId FROM DungeonData_mapIds_junction WHERE DungeonData_id = ${dungeonId}
+                UNION
+                SELECT m.id AS mapId FROM MapInformationData m JOIN SubAreaData sa ON sa.id = m.subAreaId WHERE sa.dungeonId = ${dungeonId}
+            ),
+            dungeon_monster_ids AS (
+                SELECT DISTINCT CAST(je.value AS INTEGER) AS id
+                FROM SubAreaData sa, json_each(sa.monsters) je
+                WHERE sa.dungeonId = ${dungeonId}
+            ),
+            variant_monster_ids AS (
+                SELECT m2.id
+                FROM MonsterData m2
+                JOIN translations t2 ON t2.id = CAST(m2.nameId AS TEXT) AND t2.lang = 'fr'
+                WHERE EXISTS (
+                    SELECT 1 FROM MonsterData m1
+                    JOIN translations t1 ON t1.id = CAST(m1.nameId AS TEXT) AND t1.lang = 'fr'
+                    WHERE m1.id IN (SELECT id FROM dungeon_monster_ids)
+                    AND t2.value LIKE '%' || t1.value || '%'
+                )
+            )
             SELECT DISTINCT q.id, q.isEvent, tq.value AS name
             FROM QuestData q
             JOIN translations tq ON tq.id = CAST(q.nameId AS TEXT)
             WHERE tq.lang = 'fr'
             AND q.id IN (
-                SELECT qs.questId FROM QuestStepData qs
-                WHERE qs.id IN (
-                    SELECT stepId FROM QuestObjectiveFightMonstersOnMapData
-                    WHERE mapId IN (SELECT target_id FROM DungeonData_mapIds_junction WHERE DungeonData_id = ${dungeonId})
+                SELECT qs.questId FROM QuestStepData qs WHERE qs.id IN (
+                    SELECT stepId FROM QuestObjectiveFightMonstersOnMapData WHERE mapId IN (SELECT mapId FROM dungeon_maps)
                     UNION
-                    SELECT stepId FROM QuestObjectiveFightMonsterData
-                    WHERE mapId IN (SELECT target_id FROM DungeonData_mapIds_junction WHERE DungeonData_id = ${dungeonId})
+                    SELECT stepId FROM QuestObjectiveFightMonsterData WHERE mapId IN (SELECT mapId FROM dungeon_maps)
                     UNION
-                    SELECT stepId FROM QuestObjectiveDiscoverMapData
-                    WHERE mapId IN (SELECT target_id FROM DungeonData_mapIds_junction WHERE DungeonData_id = ${dungeonId})
+                    SELECT stepId FROM QuestObjectiveMultiFightMonsterData WHERE mapId IN (SELECT mapId FROM dungeon_maps)
                     UNION
-                    SELECT stepId FROM QuestObjectiveGoToNpcData
-                    WHERE mapId IN (SELECT target_id FROM DungeonData_mapIds_junction WHERE DungeonData_id = ${dungeonId})
+                    SELECT stepId FROM QuestObjectiveDiscoverMapData WHERE mapId IN (SELECT mapId FROM dungeon_maps)
+                    UNION
+                    SELECT stepId FROM QuestObjectiveGoToNpcData WHERE mapId IN (SELECT mapId FROM dungeon_maps)
                 )
+                UNION
+                SELECT qs.questId FROM QuestStepData qs
+                JOIN QuestObjectiveFightMonsterData obj ON obj.stepId = qs.id
+                WHERE json_extract(obj.parameters, '$.dungeonOnly') = 1
+                AND json_extract(obj.parameters, '$.parameter0') IN (SELECT id FROM variant_monster_ids)
+                UNION
+                SELECT qs.questId FROM QuestStepData qs
+                JOIN QuestObjectiveMultiFightMonsterData obj ON obj.stepId = qs.id
+                WHERE json_extract(obj.parameters, '$.dungeonOnly') = 1
+                AND json_extract(obj.parameters, '$.parameter0') IN (SELECT id FROM variant_monster_ids)
             )
         `.compile(db)
     );

@@ -26,6 +26,7 @@ export function App() {
     useEffect(() => {
         if (!updateInfo?.updateAvailable) return;
         toaster.create({
+            id: "update-available",
             title: "Update available",
             description: `Version ${updateInfo.latestVersion} is ready to download.`,
             type: "info",
@@ -34,6 +35,7 @@ export function App() {
                 onClick: () => window.api.openExternal(updateInfo.releaseUrl),
             },
             duration: undefined,
+            closable: true,
         });
     }, [updateInfo]);
 

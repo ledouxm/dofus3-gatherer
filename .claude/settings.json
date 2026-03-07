@@ -13,7 +13,10 @@
       "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT sa.id, sa.dungeonId, sa.nameId, t.value FROM SubAreaData sa JOIN translations t ON t.id = CAST\\(sa.nameId AS TEXT\\) WHERE sa.dungeonId > 0 AND t.lang=''fr'' LIMIT 10;\")",
       "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT * FROM QuestObjectiveDiscoverSubAreaData LIMIT 10;\")",
       "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT id, nameId, dungeonId FROM SubAreaData WHERE dungeonId=1;\")",
-      "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT * FROM QuestObjectiveDiscoverSubAreaData WHERE parameters LIKE ''%82%'' LIMIT 10;\")"
+      "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT * FROM QuestObjectiveDiscoverSubAreaData WHERE parameters LIKE ''%82%'' LIMIT 10;\")",
+      "Read(//c/users/mledo/dev/dofus-db-claude/**)",
+      "Bash('/c/Program Files/platform-tools/sqlite3' \"c:/Users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"PRAGMA table_info\\(QuestObjectiveFightMonsterData\\);\")",
+      "Bash('/c/Program Files/platform-tools/sqlite3' \"c:/Users/mledo/dev/dofus-db-claude/dofus.sqlite\" \":*)"
     ]
   }
 }
