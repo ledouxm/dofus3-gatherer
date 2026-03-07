@@ -6,7 +6,7 @@ interface UpdateInfo {
     updateAvailable: boolean;
 }
 
-const GITHUB_REPO = "mledo/dofus3-gatherer";
+const GITHUB_REPO = "ledouxm/dofus3-gatherer";
 
 export function useUpdateCheck(): UpdateInfo | null {
     const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);

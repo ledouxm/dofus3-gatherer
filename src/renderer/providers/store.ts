@@ -42,6 +42,9 @@ export type ConfigStore = {
         worldMapId: number;
         subAreaId: number;
     };
+    quests?: {
+        history: Array<{ id: number; name: string; level: number; entranceMapId: number }>;
+    };
 };
 
 export type TranslationStore = {

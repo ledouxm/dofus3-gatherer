@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sqlite3 /c/users/mledo/dev/dofus-db-claude/dofus.sqlite \".schema NpcData\")",
+      "Bash(sqlite3 /c/users/mledo/dev/dofus-db-claude/dofus.sqlite \".schema MapInformationData\")",
+      "Bash(sqlite3 /c/users/mledo/dev/dofus-db-claude/dofus.sqlite \"SELECT translations.value FROM translations INNER JOIN DungeonData ON translations.id = DungeonData.nameId WHERE DungeonData.id = 1 AND translations.lang = ''en'';\")",
+      "Bash(sqlite3 /c/users/mledo/dev/dofus-db-claude/dofus.sqlite \"SELECT translations.value FROM translations INNER JOIN QuestData ON translations.id = QuestData.nameId WHERE QuestData.id = 18 AND translations.lang = ''en'';\")",
+      "WebFetch(domain:www.chakra-ui.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT qc.id, qc.nameId, t.value FROM QuestCategoryData qc JOIN translations t ON t.id = CAST\\(qc.nameId AS TEXT\\) WHERE t.lang=''fr'' LIMIT 20;\")",
+      "Read(//c/users/mledo/dev/dofus-db-claude/.claude/**)",
+      "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT d.id as dungeonId, d.nameId as dungeonNameId, qc.id as categoryId, count\\(q.id\\) as questCount FROM DungeonData d JOIN QuestCategoryData qc ON qc.nameId = d.nameId JOIN QuestData q ON q.categoryId = qc.id WHERE q.isDungeonQuest=1 GROUP BY d.id LIMIT 10;\")",
+      "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT sa.id, sa.dungeonId, sa.nameId, t.value FROM SubAreaData sa JOIN translations t ON t.id = CAST\\(sa.nameId AS TEXT\\) WHERE sa.dungeonId > 0 AND t.lang=''fr'' LIMIT 10;\")",
+      "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT * FROM QuestObjectiveDiscoverSubAreaData LIMIT 10;\")",
+      "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT id, nameId, dungeonId FROM SubAreaData WHERE dungeonId=1;\")",
+      "Bash(sqlite3 \"C:/users/mledo/dev/dofus-db-claude/dofus.sqlite\" \"SELECT * FROM QuestObjectiveDiscoverSubAreaData WHERE parameters LIKE ''%82%'' LIMIT 10;\")"
+    ]
+  }
+}

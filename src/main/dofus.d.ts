@@ -512,13 +512,13 @@ export type Generated<T> =
 //   typeId: number;
 // }
 
-// export interface DungeonData {
-//   entranceMapId: number;
-//   exitMapId: number;
-//   id: Generated<number>;
-//   nameId: number;
-//   optimalPlayerLevel: number;
-// }
+export interface DungeonData {
+    entranceMapId: number;
+    exitMapId: number;
+    id: Generated<number>;
+    nameId: number;
+    optimalPlayerLevel: number;
+}
 
 // export interface DungeonDataMapIdsJunction {
 //   DungeonData_id: number | null;
@@ -1317,25 +1317,25 @@ export interface MapsCoordinateDataMapIdsJunction {
 //   target_id: number | null;
 // }
 
-// export interface QuestData {
-//   categoryId: number;
-//   followable: number;
-//   id: Generated<number>;
-//   isDungeonQuest: number | null;
-//   isEvent: number | null;
-//   isPartyQuest: number | null;
-//   levelMax: number;
-//   levelMin: number;
-//   nameId: number;
-//   repeatLimit: number;
-//   repeatType: number;
-//   startCriterion: string;
-// }
+export interface QuestData {
+    categoryId: number;
+    followable: number;
+    id: Generated<number>;
+    isDungeonQuest: number | null;
+    isEvent: number | null;
+    isPartyQuest: number | null;
+    levelMax: number;
+    levelMin: number;
+    nameId: number;
+    repeatLimit: number;
+    repeatType: number;
+    startCriterion: string;
+}
 
-// export interface QuestDataStepIdsJunction {
-//   QuestData_id: number | null;
-//   target_id: number | null;
-// }
+export interface QuestDataStepIdsJunction {
+    QuestData_id: number | null;
+    target_id: number | null;
+}
 
 // export interface QuestObjectiveBringItemToNpcData {
 //   coords: string;
@@ -1442,15 +1442,15 @@ export interface MapsCoordinateDataMapIdsJunction {
 //   nameId: number;
 // }
 
-// export interface QuestStepData {
-//   descriptionId: number;
-//   dialogId: number;
-//   duration: number;
-//   id: Generated<number>;
-//   nameId: number;
-//   optimalLevel: number;
-//   questId: number;
-// }
+export interface QuestStepData {
+    descriptionId: number;
+    dialogId: number;
+    duration: number;
+    id: Generated<number>;
+    nameId: number;
+    optimalLevel: number;
+    questId: number;
+}
 
 // export interface QuestStepDataObjectiveIdsJunction {
 //   QuestStepData_id: number | null;
@@ -2091,7 +2091,7 @@ export interface DB {
     // CreatureBoneTypeData: CreatureBoneTypeData;
     // CustomModeBreedSpellData: CustomModeBreedSpellData;
     // DocumentData: DocumentData;
-    // DungeonData: DungeonData;
+    DungeonData: DungeonData;
     // DungeonData_mapIds_junction: DungeonDataMapIdsJunction;
     // EffectData: EffectData;
     // EffectInstanceDice: EffectInstanceDice;
@@ -2179,8 +2179,8 @@ export interface DB {
     // ProgressingAchievementStepData: ProgressingAchievementStepData;
     // QuestCategoryData: QuestCategoryData;
     // QuestCategoryData_questIds_junction: QuestCategoryDataQuestIdsJunction;
-    // QuestData: QuestData;
-    // QuestData_stepIds_junction: QuestDataStepIdsJunction;
+    QuestData: QuestData;
+    QuestData_stepIds_junction: QuestDataStepIdsJunction;
     // QuestObjectiveBringItemToNpcData: QuestObjectiveBringItemToNpcData;
     // QuestObjectiveBringSoulToNpcData: QuestObjectiveBringSoulToNpcData;
     // QuestObjectiveCraftItemData: QuestObjectiveCraftItemData;
@@ -2192,7 +2192,7 @@ export interface DB {
     // QuestObjectiveGoToNpcData: QuestObjectiveGoToNpcData;
     // QuestObjectiveMultiFightMonsterData: QuestObjectiveMultiFightMonsterData;
     // QuestObjectiveTypeData: QuestObjectiveTypeData;
-    // QuestStepData: QuestStepData;
+    QuestStepData: QuestStepData;
     // QuestStepData_objectiveIds_junction: QuestStepDataObjectiveIdsJunction;
     // QuestStepData_rewardsIds_junction: QuestStepDataRewardsIdsJunction;
     // QuestStepRewardData: QuestStepRewardData;

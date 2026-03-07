@@ -12,6 +12,7 @@ import { type AppTab, TitleBar } from "./ui/TitleBar";
 import { WorldMapPickerButton } from "./ui/WorldMapPickerButton";
 import { HintsLayer } from "./dofus-map/HintsLayer";
 import { QuickActionsPanel } from "./ui/QuickActionsPanel";
+import { QuestsPanel } from "./ui/QuestsPanel";
 import { ViewerApp } from "./viewer/ViewerApp";
 import { Toaster, toaster } from "./ui/toaster";
 import { useUpdateCheck } from "./useUpdateCheck";
@@ -80,6 +81,17 @@ export function App() {
                 }}
             >
                 <ViewerApp />
+            </div>
+
+            {/* Quests tab */}
+            <div
+                style={{
+                    display: activeTab === "quests" ? "flex" : "none",
+                    flex: 1,
+                    overflow: "hidden",
+                }}
+            >
+                <QuestsPanel />
             </div>
         </div>
     );
