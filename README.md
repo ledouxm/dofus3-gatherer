@@ -23,8 +23,7 @@ Windows overlay for Dofus 3 that sniffs game packets and shows resource/characte
 pnpm install
 
 # Rebuild native addons after install
-cd node_modules/keysender && npx node-gyp rebuild --target=40.6.1 --arch=x64 --dist-url=https://electronjs.org/headers
-cd ../..
+npx @electron/rebuild -f -w keysender
 
 pnpm dev
 ```
