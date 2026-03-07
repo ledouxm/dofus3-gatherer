@@ -1,0 +1,14 @@
+appId: fr.mledoux.dofus3-gatherer
+productName: Dofus3 Gatherer
+directories:
+  output: dist
+files:
+  - out/**/*
+  - node_modules/**/*
+  - package.json
+extraResources:
+  - from: resources/npcap-installer.exe
+    to: npcap-installer.exe
+win:
+  target: portable
+defaultArch: x64

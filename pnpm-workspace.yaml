@@ -1,0 +1,8 @@
+onlyBuiltDependencies:
+  - electron
+  - ffi
+  - ffi-napi
+  - lzma-native
+  - protobufjs
+  - ref
+  - ref-napi

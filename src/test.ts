@@ -1,0 +1,3 @@
+const hex =
+    "2e122c0a2a0a13747970652e616e6b616d612e636f6d2f69736a121308dfe3feffffffffffff011204f902ea021803";
+console.log(hex);

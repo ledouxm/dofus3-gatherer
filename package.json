@@ -1,0 +1,55 @@
+{
+    "name": "dofus3-gatherer",
+    "version": "1.0.0",
+    "description": "",
+    "main": "./out/main/index.js",
+    "scripts": {
+        "start": "electron-vite preview",
+        "dev": "electron-vite dev",
+        "prebuild": "electron-vite build",
+        "build": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder",
+        "test": "node src/test.ts"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "pnpm": {
+        "onlyBuiltDependencies": ["esbuild", "electron", "protobufjs"],
+        "ignoredBuiltDependencies": ["better-sqlite3", "cap", "keysender"]
+    },
+    "packageManager": "pnpm@10.12.4",
+    "devDependencies": {
+        "@electron-toolkit/tsconfig": "^2.0.0",
+        "@types/better-sqlite3": "^7.6.13",
+        "@types/leaflet": "^1.9.21",
+        "@types/node": "^25.3.3",
+        "@types/react": "^19.2.14",
+        "cross-env": "^10.1.0",
+        "electron": "^40.6.1",
+        "electron-builder": "^25.1.8",
+        "electron-vite": "^5.0.0"
+    },
+    "dependencies": {
+        "@chakra-ui/react": "^3.34.0",
+        "@electron-toolkit/preload": "^3.0.2",
+        "@electron-toolkit/utils": "^4.0.0",
+        "@simplestack/store": "^0.7.6",
+        "@tanstack/react-query": "^5.90.21",
+        "@vitejs/plugin-react": "^5.1.4",
+        "better-sqlite3": "^12.6.2",
+        "cap": "^0.2.1",
+        "keysender": "^2.4.0",
+        "kysely": "^0.28.11",
+        "leaflet": "^1.9.4",
+        "next-themes": "^0.4.6",
+        "ofetch": "^1.5.1",
+        "pastable": "^2.2.1",
+        "protobufjs": "^8.0.0",
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4",
+        "react-icons": "^5.6.0",
+        "react-leaflet": "^5.0.0",
+        "react-resizable-panels": "^4.7.1",
+        "zod": "^4.3.6"
+    }
+}

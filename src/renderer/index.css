@@ -1,0 +1,18 @@
+:root {
+}
+body {
+    margin: 0 !important;
+}
+
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-map {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}

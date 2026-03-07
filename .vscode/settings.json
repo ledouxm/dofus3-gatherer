@@ -1,0 +1,21 @@
+{
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/old/**": true,
+        "**/build/**": true,
+        "**/out/**": true
+    },
+    "files.exclude": {
+        "**/node_modules": true,
+        "**/old": true,
+        "**/build": true,
+        "**/out": true
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/old": true,
+        "**/build": true,
+        "**/out": true
+    },
+    "typescript.preferences.includePackageJsonAutoImports": "off"
+}

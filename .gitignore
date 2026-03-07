@@ -1,0 +1,8 @@
+node_modules
+build
+*.sqlite
+old
+out
+temp
+dist
+.env
