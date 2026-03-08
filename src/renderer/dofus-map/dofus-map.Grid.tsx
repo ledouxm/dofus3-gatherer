@@ -74,21 +74,28 @@ export function CoordDisplay({ meta }: { meta: WorldmapMeta }) {
         },
         click(e) {
             const copyEnabled = config.copyCoordinatesOnClick !== false;
-            const sendEnabled = config.travel?.sendToProcess === true;
-            if (!copyEnabled && !sendEnabled) return;
+            if (!copyEnabled) return;
             const c = worldToDofus({ x: e.latlng.lng, y: -e.latlng.lat }, meta);
             const text = `/travel ${Math.floor(c.posX)} ${Math.floor(c.posY)}`;
-            if (copyEnabled) {
+            navigator.clipboard.writeText(text);
+            if (lastToastId.current) toaster.dismiss(lastToastId.current);
+            lastToastId.current = toaster.create({ title: <>Copied: <b>{text}</b></>, type: "success", duration: 2000 });
+        },
+        dblclick(e) {
+            const sendEnabled = config.travel?.sendToProcess === true;
+            if (!sendEnabled) return;
+            const c = worldToDofus({ x: e.latlng.lng, y: -e.latlng.lat }, meta);
+            const text = `/travel ${Math.floor(c.posX)} ${Math.floor(c.posY)}`;
+            const handle = mapStore.get().travelHandle;
+            if (handle !== null) {
                 navigator.clipboard.writeText(text);
+                window.api.focusWindowAndSend(handle, "travel");
                 if (lastToastId.current) toaster.dismiss(lastToastId.current);
-                lastToastId.current = toaster.create({ title: <>Copied: <b>{text}</b></>, type: "success", duration: 2000 });
-            }
-            if (sendEnabled) {
-                const handle = mapStore.get().travelHandle;
-                if (handle !== null) {
-                    if (!copyEnabled) navigator.clipboard.writeText(text);
-                    window.api.focusWindowAndSend(handle, "travel");
-                }
+                lastToastId.current = toaster.create({
+                    title: <>Voyage vers <b>[{Math.floor(c.posX)}, {Math.floor(c.posY)}]</b></>,
+                    type: "success",
+                    duration: 2000,
+                });
             }
         },
     });

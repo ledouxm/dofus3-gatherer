@@ -1,17 +1,19 @@
-import { Box, Checkbox, Flex, HStack, IconButton, Popover, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, IconButton, Popover, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { LuNavigation2, LuRefreshCw } from "react-icons/lu";
+import { LuClipboardPaste, LuNavigation2, LuRefreshCw } from "react-icons/lu";
 import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import { mapStore } from "../providers/store";
 
 type WindowInfo = { handle: number; title: string };
+type ClickMode = "copy" | "travel";
 
 export const TravelButton = () => {
     const config = useConfig();
     const updateConfig = useUpdateConfigMutation();
 
-    const [copyToClipboard, setCopyToClipboard] = useState(config.copyCoordinatesOnClick !== false);
-    const [sendToProcess, setSendToProcess] = useState(config.travel?.sendToProcess === true);
+    const [clickMode, setClickModeState] = useState<ClickMode>(
+        config.travel?.sendToProcess === true ? "travel" : "copy",
+    );
     const [windows, setWindows] = useState<WindowInfo[]>([]);
     const [selectedHandle, setSelectedHandle] = useState<number | null>(null);
 
@@ -23,9 +25,12 @@ export const TravelButton = () => {
         if (target) {
             setSelectedHandle(target.handle);
             mapStore.set((v) => ({ ...v, travelHandle: target.handle }));
-        } else if (selectedHandle === null && wins.length > 0) {
-            setSelectedHandle(wins[0].handle);
-            mapStore.set((v) => ({ ...v, travelHandle: wins[0].handle }));
+        } else {
+            const dofus = wins.find((w) => w.title.endsWith("- Release"));
+            if (dofus) {
+                setSelectedHandle(dofus.handle);
+                mapStore.set((v) => ({ ...v, travelHandle: dofus.handle }));
+            }
         }
     };
 
@@ -35,21 +40,19 @@ export const TravelButton = () => {
         });
     }, []);
 
-    const selectWindow = (handle: number) => {
+    const selectWindow = (handle: number | null) => {
         setSelectedHandle(handle);
         mapStore.set((v) => ({ ...v, travelHandle: handle }));
-        const title = windows.find((w) => w.handle === handle)?.title;
-        if (title) window.api.saveConfig({ travel: { ...config.travel, selectedWindowTitle: title } });
+        const title = handle ? windows.find((w) => w.handle === handle)?.title : undefined;
+        window.api.saveConfig({ travel: { ...config.travel, selectedWindowTitle: title } });
     };
 
-    const toggleCopyToClipboard = (checked: boolean) => {
-        setCopyToClipboard(checked);
-        updateConfig.mutate({ copyCoordinatesOnClick: checked });
-    };
-
-    const toggleSendToProcess = (checked: boolean) => {
-        setSendToProcess(checked);
-        updateConfig.mutate({ travel: { ...config.travel, sendToProcess: checked } });
+    const setClickMode = (mode: ClickMode) => {
+        setClickModeState(mode);
+        updateConfig.mutate({
+            copyCoordinatesOnClick: mode === "copy",
+            travel: { ...config.travel, sendToProcess: mode === "travel" },
+        });
     };
 
     return (
@@ -80,74 +83,179 @@ export const TravelButton = () => {
                         borderRadius="md"
                         p={3}
                     >
-                        <Text fontSize="10px" fontWeight="600" letterSpacing="0.12em" color="whiteAlpha.500" mb={3}>
-                            TRAVEL OPTIONS
-                        </Text>
-
-                        <Flex direction="column" gap={2} mb={3}>
-                            <Checkbox.Root
-                                checked={copyToClipboard}
-                                onCheckedChange={(e) => toggleCopyToClipboard(!!e.checked)}
-                                size="sm"
+                        {/* Window selector — always visible */}
+                        <HStack justify="space-between" mb={2}>
+                            <Text
+                                fontSize="10px"
+                                fontWeight="600"
+                                letterSpacing="0.12em"
+                                color="whiteAlpha.700"
                             >
-                                <Checkbox.HiddenInput />
-                                <Checkbox.Control />
-                                <Checkbox.Label>
-                                    <Text fontSize="sm" color="whiteAlpha.800">Copy /travel to clipboard</Text>
-                                </Checkbox.Label>
-                            </Checkbox.Root>
-
-                            <Checkbox.Root
-                                checked={sendToProcess}
-                                onCheckedChange={(e) => toggleSendToProcess(!!e.checked)}
-                                size="sm"
+                                FENÊTRES
+                            </Text>
+                            <IconButton
+                                size="xs"
+                                variant="ghost"
+                                aria-label="Rafraîchir"
+                                color="whiteAlpha.600"
+                                _hover={{ color: "whiteAlpha.900" }}
+                                onClick={() =>
+                                    refresh(windows.find((w) => w.handle === selectedHandle)?.title)
+                                }
                             >
-                                <Checkbox.HiddenInput />
-                                <Checkbox.Control />
-                                <Checkbox.Label>
-                                    <Text fontSize="sm" color="whiteAlpha.800">Write to process</Text>
-                                </Checkbox.Label>
-                            </Checkbox.Root>
-                        </Flex>
+                                <LuRefreshCw />
+                            </IconButton>
+                        </HStack>
 
-                        <Box borderTop="1px solid rgba(255,255,255,0.08)" pt={3}>
-                            <HStack justify="space-between" mb={2}>
-                                <Text fontSize="10px" fontWeight="600" letterSpacing="0.12em" color="whiteAlpha.500">
-                                    FENÊTRES
-                                </Text>
-                                <IconButton
-                                    size="xs"
-                                    variant="ghost"
-                                    aria-label="Rafraîchir"
-                                    color="whiteAlpha.500"
-                                    _hover={{ color: "whiteAlpha.900" }}
-                                    onClick={() => refresh(windows.find((w) => w.handle === selectedHandle)?.title)}
+                        <select
+                            value={selectedHandle ?? ""}
+                            onChange={(e) =>
+                                selectWindow(e.target.value ? Number(e.target.value) : null)
+                            }
+                            style={{
+                                background: "rgb(15, 18, 28)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: "6px",
+                                color: "rgba(255,255,255,0.85)",
+                                fontSize: "11px",
+                                padding: "4px 6px",
+                                cursor: "pointer",
+                                width: "100%",
+                            }}
+                        >
+                            <option value="" style={{ background: "rgb(15, 18, 28)" }}>
+                                — Sélectionner —
+                            </option>
+                            {windows.map((w) => (
+                                <option
+                                    key={w.handle}
+                                    value={w.handle}
+                                    style={{ background: "rgb(15, 18, 28)" }}
                                 >
-                                    <LuRefreshCw />
-                                </IconButton>
-                            </HStack>
+                                    {w.title.length > 26 ? w.title.slice(0, 26) + "…" : w.title}
+                                </option>
+                            ))}
+                        </select>
 
-                            <select
-                                value={selectedHandle ?? ""}
-                                onChange={(e) => selectWindow(Number(e.target.value))}
-                                style={{
-                                    background: "rgb(15, 18, 28)",
-                                    border: "1px solid rgba(255,255,255,0.1)",
-                                    borderRadius: "6px",
-                                    color: "rgba(255,255,255,0.85)",
-                                    fontSize: "11px",
-                                    padding: "4px 6px",
-                                    cursor: "pointer",
-                                    width: "100%",
-                                }}
+                        {/* Big paste & travel button */}
+                        <Box mt={4} pt={3} borderTop="1px solid rgba(255,255,255,0.08)">
+                            <Text
+                                fontSize="10px"
+                                fontWeight="600"
+                                letterSpacing="0.12em"
+                                color="whiteAlpha.700"
+                                mb={1}
                             >
-                                {windows.map((w) => (
-                                    <option key={w.handle} value={w.handle} style={{ background: "rgb(15, 18, 28)" }}>
-                                        {w.title.length > 26 ? w.title.slice(0, 26) + "…" : w.title}
-                                    </option>
-                                ))}
-                            </select>
+                                COLLER UN VOYAGE
+                            </Text>
+                            <Button
+                                mt={2}
+                                w="100%"
+                                h="40px"
+                                disabled={selectedHandle === null}
+                                onClick={() =>
+                                    selectedHandle !== null &&
+                                    window.api.focusWindowAndSend(selectedHandle, "travel")
+                                }
+                                bg="rgba(212,240,0,0.08)"
+                                color={
+                                    selectedHandle !== null ? "#d4f000" : "rgba(255,255,255,0.3)"
+                                }
+                                border={`1px solid ${selectedHandle !== null ? "rgba(212,240,0,0.4)" : "rgba(255,255,255,0.1)"}`}
+                                borderRadius="md"
+                                fontSize="13px"
+                                fontWeight="700"
+                                gap={2}
+                                _hover={{
+                                    bg:
+                                        selectedHandle !== null
+                                            ? "rgba(212,240,0,0.15)"
+                                            : "rgba(212,240,0,0.08)",
+                                }}
+                                _disabled={{ opacity: 1, cursor: "not-allowed" }}
+                            >
+                                <LuClipboardPaste />
+                                Voyager
+                            </Button>
+                            <Text fontSize="10px" color="whiteAlpha.600" lineHeight="1.4" mt={2}>
+                                Colle la commande <b>/travel</b> du presse-papier dans le jeu
+                            </Text>
                         </Box>
+
+                        {/* Comportement des clics */}
+                        <Flex
+                            direction="column"
+                            mt={3}
+                            pt={3}
+                            borderTop="1px solid rgba(255,255,255,0.08)"
+                        >
+                            <Text
+                                fontSize="10px"
+                                fontWeight="600"
+                                letterSpacing="0.12em"
+                                color="whiteAlpha.600"
+                                mb={2}
+                            >
+                                COMPORTEMENT DES CLICS
+                            </Text>
+                            <HStack gap={1} mb={2}>
+                                <Button
+                                    size="xs"
+                                    flex={1}
+                                    onClick={() => setClickMode("copy")}
+                                    bg={
+                                        clickMode === "copy"
+                                            ? "rgba(212,240,0,0.12)"
+                                            : "transparent"
+                                    }
+                                    color={
+                                        clickMode === "copy" ? "#d4f000" : "rgba(255,255,255,0.7)"
+                                    }
+                                    border={`1px solid ${clickMode === "copy" ? "rgba(212,240,0,0.5)" : "rgba(255,255,255,0.2)"}`}
+                                    borderRadius="md"
+                                    fontSize="10px"
+                                    fontWeight="600"
+                                    _hover={{
+                                        bg:
+                                            clickMode === "copy"
+                                                ? "rgba(212,240,0,0.18)"
+                                                : "rgba(255,255,255,0.08)",
+                                    }}
+                                >
+                                    Copier
+                                </Button>
+                                <Button
+                                    size="xs"
+                                    flex={1}
+                                    onClick={() => setClickMode("travel")}
+                                    bg={
+                                        clickMode === "travel"
+                                            ? "rgba(212,240,0,0.12)"
+                                            : "transparent"
+                                    }
+                                    color={
+                                        clickMode === "travel" ? "#d4f000" : "rgba(255,255,255,0.7)"
+                                    }
+                                    border={`1px solid ${clickMode === "travel" ? "rgba(212,240,0,0.5)" : "rgba(255,255,255,0.2)"}`}
+                                    borderRadius="md"
+                                    fontSize="10px"
+                                    fontWeight="600"
+                                    _hover={{
+                                        bg:
+                                            clickMode === "travel"
+                                                ? "rgba(212,240,0,0.18)"
+                                                : "rgba(255,255,255,0.08)",
+                                    }}
+                                >
+                                    Voyage auto
+                                </Button>
+                            </HStack>
+                            <Text fontSize="10px" color="whiteAlpha.600" lineHeight="1.4">
+                                {clickMode === "copy"
+                                    ? "Cliquer sur la map pour copier la commande travel"
+                                    : "Double-cliquer sur la map pour voyager automatiquement"}
+                            </Text>
+                        </Flex>
                     </Popover.Content>
                 </Popover.Positioner>
             </Popover.Root>

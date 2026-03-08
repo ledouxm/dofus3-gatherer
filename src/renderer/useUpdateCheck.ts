@@ -13,6 +13,7 @@ export function useUpdateCheck(): UpdateInfo | null {
 
     useEffect(() => {
         async function check() {
+            if (import.meta.env.DEV) return;
             try {
                 const currentVersion = await window.api.getAppVersion();
                 const release = await fetch(
