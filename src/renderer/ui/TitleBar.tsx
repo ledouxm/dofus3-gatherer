@@ -44,23 +44,20 @@ export const TitleBar = ({ activeTab, onTabChange }: TitleBarProps) => {
         >
             <HStack w="full" justifyContent="space-between" gap={0} alignItems="stretch">
                 {/* Left side: pin + DEV badge */}
-                <HStack
-                    gap={0}
-                    alignItems="center"
-                    flex={1}
-                    style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-                >
-                    <IconButton
-                        aria-label="Pin window"
-                        size="xs"
-                        variant={isPinned ? "solid" : "ghost"}
-                        colorPalette={isPinned ? "blue" : "gray"}
-                        onClick={handlePin}
-                        color={isPinned ? undefined : "whiteAlpha.600"}
-                        _hover={{ color: "white" }}
-                    >
-                        <LuPin />
-                    </IconButton>
+                <HStack gap={0} alignItems="center" flex={1}>
+                    <Box style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+                        <IconButton
+                            aria-label="Pin window"
+                            size="xs"
+                            variant={isPinned ? "solid" : "ghost"}
+                            colorPalette={isPinned ? "blue" : "gray"}
+                            onClick={handlePin}
+                            color={isPinned ? undefined : "whiteAlpha.600"}
+                            _hover={{ color: "white" }}
+                        >
+                            <LuPin />
+                        </IconButton>
+                    </Box>
                     {import.meta.env.DEV && (
                         <Box
                             display="flex"
@@ -114,33 +111,29 @@ export const TitleBar = ({ activeTab, onTabChange }: TitleBarProps) => {
                 </HStack>
 
                 {/* Window controls */}
-                <HStack
-                    gap={0}
-                    alignItems="center"
-                    flex={1}
-                    justifyContent="flex-end"
-                    style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-                >
-                    <IconButton
-                        aria-label="Minimize"
-                        size="xs"
-                        variant="ghost"
-                        color="whiteAlpha.600"
-                        _hover={{ color: "white", bg: "whiteAlpha.100" }}
-                        onClick={() => window.api.minimizeWindow()}
-                    >
-                        <LuMinus />
-                    </IconButton>
-                    <IconButton
-                        aria-label="Close"
-                        size="xs"
-                        variant="ghost"
-                        color="whiteAlpha.600"
-                        _hover={{ color: "white", bg: "red.600" }}
-                        onClick={() => window.api.closeWindow()}
-                    >
-                        <LuX />
-                    </IconButton>
+                <HStack gap={0} alignItems="center" flex={1} justifyContent="flex-end">
+                    <HStack gap={0} style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+                        <IconButton
+                            aria-label="Minimize"
+                            size="xs"
+                            variant="ghost"
+                            color="whiteAlpha.600"
+                            _hover={{ color: "white", bg: "whiteAlpha.100" }}
+                            onClick={() => window.api.minimizeWindow()}
+                        >
+                            <LuMinus />
+                        </IconButton>
+                        <IconButton
+                            aria-label="Close"
+                            size="xs"
+                            variant="ghost"
+                            color="whiteAlpha.600"
+                            _hover={{ color: "white", bg: "red.600" }}
+                            onClick={() => window.api.closeWindow()}
+                        >
+                            <LuX />
+                        </IconButton>
+                    </HStack>
                 </HStack>
             </HStack>
         </Box>
