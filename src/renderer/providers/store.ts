@@ -1,5 +1,6 @@
 import { store } from "@simplestack/store";
 import type { WorldmapMeta } from "../dofus-map/dofus-map.utils";
+import type { GuideProgress } from "../ui/guides/types";
 
 export const appStore = store<AppStore>({
     config: {
@@ -50,6 +51,11 @@ export type ConfigStore = {
     travel?: {
         sendToProcess?: boolean;
         selectedWindowTitle?: string;
+    };
+    guides?: {
+        folderPath?: string;
+        confJsonPath?: string;
+        progress: { [guideId: string]: GuideProgress };
     };
 };
 

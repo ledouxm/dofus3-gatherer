@@ -101,6 +101,70 @@ const api = {
     ) => ipcRenderer.off("init-status", listener),
     getDofusVersion: (): Promise<string | null> => ipcRenderer.invoke("get-dofus-version"),
     getAdminToken: (): Promise<string | null> => ipcRenderer.invoke("get-admin-token"),
+    pickGuidesFolder: (): Promise<string | null> => ipcRenderer.invoke("pick-guides-folder"),
+    readGuidesFolder: async (folderPath: string): Promise<any[]> => {
+        const entries: any[] = [];
+        try {
+            const allFiles = await fs.readdir(folderPath, { recursive: true });
+            for (const f of allFiles) {
+                const filePath = path.join(folderPath, f as string);
+                if (!filePath.endsWith(".json")) continue;
+                try {
+                    const raw = await fs.readFile(filePath, "utf-8");
+                    const data = JSON.parse(raw);
+                    if (!data || typeof data.id !== "number" || !Array.isArray(data.steps)) continue;
+                    entries.push({
+                        filePath,
+                        id: data.id,
+                        name: data.name ?? path.basename(filePath, ".json"),
+                        description: data.description ?? null,
+                        node_image: data.node_image ?? null,
+                        stepCount: data.steps.length,
+                        lang: data.lang,
+                    });
+                } catch {}
+            }
+        } catch {}
+        return entries.sort((a: any, b: any) => a.name.localeCompare(b.name));
+    },
+    readGuideFile: async (filePath: string): Promise<any | null> => {
+        try {
+            const raw = await fs.readFile(filePath, "utf-8");
+            return JSON.parse(raw);
+        } catch {
+            return null;
+        }
+    },
+    pickGuidesConfFile: (): Promise<string | null> => ipcRenderer.invoke("pick-guides-conf-file"),
+    readGuidesConf: async (confJsonPath: string): Promise<{ progresses: any[]; profileName: string } | null> => {
+        try {
+            const raw = await fs.readFile(confJsonPath, "utf-8");
+            const conf = JSON.parse(raw);
+            const profileId = conf.profileInUse;
+            const profile =
+                conf.profiles?.find((p: any) => p.id === profileId) ?? conf.profiles?.[0];
+            if (!profile) return null;
+            return {
+                progresses: profile.progresses ?? [],
+                profileName: profile.name ?? "Player",
+            };
+        } catch {
+            return null;
+        }
+    },
+    writeGuidesConf: async (confJsonPath: string, progresses: any[]): Promise<void> => {
+        try {
+            const raw = await fs.readFile(confJsonPath, "utf-8");
+            const conf = JSON.parse(raw);
+            const profileId = conf.profileInUse;
+            const idx = conf.profiles?.findIndex((p: any) => p.id === profileId) ?? -1;
+            const profileIdx = idx !== -1 ? idx : 0;
+            if (conf.profiles?.[profileIdx]) {
+                conf.profiles[profileIdx].progresses = progresses;
+            }
+            await fs.writeFile(confJsonPath, JSON.stringify(conf, null, 2), "utf-8");
+        } catch {}
+    },
 };
 
 export type AppApi = typeof api;

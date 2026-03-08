@@ -13,6 +13,7 @@ import { WorldMapPickerButton } from "./ui/WorldMapPickerButton";
 import { HintsLayer } from "./dofus-map/HintsLayer";
 import { TravelButton } from "./ui/TravelButton";
 import { QuestsPanel } from "./ui/QuestsPanel";
+import { GuidesPanel } from "./ui/GuidesPanel";
 import { ViewerApp } from "./viewer/ViewerApp";
 import { Toaster, toaster } from "./ui/toaster";
 import { useUpdateCheck } from "./useUpdateCheck";
@@ -104,6 +105,18 @@ export function App() {
                 }}
             >
                 <QuestsPanel />
+            </div>
+
+            {/* Guides tab */}
+            <div
+                style={{
+                    display: activeTab === "guides" ? "flex" : "none",
+                    flex: 1,
+                    overflow: "hidden",
+                    flexDirection: "column",
+                }}
+            >
+                <GuidesPanel />
             </div>
 
             {/* Admin tab */}

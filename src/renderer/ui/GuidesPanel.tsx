@@ -1,0 +1,221 @@
+import { Box, HStack, Text, VStack } from "@chakra-ui/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { LuFolderOpen } from "react-icons/lu";
+import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
+import { buildProgressPatch } from "./guides/progressUtils";
+import { GuideList } from "./guides/GuideList";
+import { GuideViewer } from "./guides/GuideViewer";
+import type { GuideEntry, GuideFile, GuideProgress } from "./guides/types";
+
+const BG = "rgba(10, 12, 18, 0.92)";
+
+type View = "empty" | "list" | { kind: "viewer"; guide: GuideFile; entry: GuideEntry };
+
+export function GuidesPanel() {
+    const config = useConfig();
+    const updateConfig = useUpdateConfigMutation();
+
+    const [view, setView] = useState<View>("empty");
+    const [entries, setEntries] = useState<GuideEntry[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Unified progress state — sourced from either conf.json or internal configStore
+    const [progresses, setProgresses] = useState<GuideProgress[]>([]);
+    const [confJsonPath, setConfJsonPath] = useState<string | null>(null);
+    const [profileName, setProfileName] = useState<string | null>(null);
+
+    const hasLoaded = useRef(false);
+
+    // Convert internal configStore progress map to array
+    const internalProgressesToArray = useCallback((): GuideProgress[] => {
+        return Object.values(config?.guides?.progress ?? {});
+    }, [config?.guides?.progress]);
+
+    // Auto-load folder and conf.json on mount
+    useEffect(() => {
+        if (hasLoaded.current) return;
+        const folderPath = config?.guides?.folderPath;
+        const savedConfPath = config?.guides?.confJsonPath;
+        if (!folderPath) return;
+        hasLoaded.current = true;
+
+        setLoading(true);
+
+        const loadAll = async () => {
+            // Load guides
+            const loaded = await window.api.readGuidesFolder(folderPath).catch(() => []);
+            setEntries(loaded as GuideEntry[]);
+            setView("list");
+
+            // Load conf.json if previously selected
+            if (savedConfPath) {
+                const confData = await window.api.readGuidesConf(savedConfPath).catch(() => null);
+                if (confData) {
+                    setConfJsonPath(savedConfPath);
+                    setProfileName(confData.profileName);
+                    setProgresses(confData.progresses as GuideProgress[]);
+                    return;
+                }
+            }
+            // Fall back to internal progress
+            setProgresses(internalProgressesToArray());
+        };
+
+        loadAll().finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [config?.guides?.folderPath]);
+
+    // Keep internal progress in sync when no conf.json is loaded
+    useEffect(() => {
+        if (confJsonPath) return;
+        setProgresses(internalProgressesToArray());
+    }, [confJsonPath, internalProgressesToArray]);
+
+    const handlePickFolder = useCallback(async () => {
+        const folderPath = await window.api.pickGuidesFolder();
+        if (!folderPath) return;
+        setLoading(true);
+        try {
+            const loaded = await window.api.readGuidesFolder(folderPath);
+            setEntries(loaded as GuideEntry[]);
+            setView("list");
+            updateConfig.mutate({
+                guides: {
+                    ...(config?.guides ?? { progress: {} }),
+                    folderPath,
+                },
+            });
+        } finally {
+            setLoading(false);
+        }
+    }, [config, updateConfig]);
+
+    const handleLoadConf = useCallback(async () => {
+        const filePath = await window.api.pickGuidesConfFile();
+        if (!filePath) return;
+        const confData = await window.api.readGuidesConf(filePath);
+        if (!confData) return;
+        setConfJsonPath(filePath);
+        setProfileName(confData.profileName);
+        setProgresses(confData.progresses as GuideProgress[]);
+        // Persist the conf.json path
+        updateConfig.mutate({
+            guides: {
+                ...(config?.guides ?? { progress: {} }),
+                confJsonPath: filePath,
+            },
+        });
+    }, [config, updateConfig]);
+
+    const handleProgressChange = useCallback(
+        async (guideId: number, patch: Partial<GuideProgress>) => {
+            const existing = progresses.find((p) => p.id === guideId) ?? {
+                id: guideId,
+                currentStep: 0,
+                steps: {},
+                updatedAt: new Date().toISOString(),
+            };
+            const updated: GuideProgress = {
+                ...existing,
+                ...patch,
+                updatedAt: new Date().toISOString(),
+            };
+            const newProgresses = progresses.some((p) => p.id === guideId)
+                ? progresses.map((p) => (p.id === guideId ? updated : p))
+                : [...progresses, updated];
+
+            setProgresses(newProgresses);
+
+            if (confJsonPath) {
+                await window.api.writeGuidesConf(confJsonPath, newProgresses);
+            } else {
+                updateConfig.mutate(buildProgressPatch(config!, guideId, patch));
+            }
+        },
+        [progresses, confJsonPath, config, updateConfig],
+    );
+
+    const handleSelectGuide = useCallback(async (entry: GuideEntry) => {
+        const guide = await window.api.readGuideFile(entry.filePath);
+        if (!guide) return;
+        setView({ kind: "viewer", guide: guide as GuideFile, entry });
+    }, []);
+
+    const handleBack = useCallback(() => {
+        setView("list");
+    }, []);
+
+    if (loading) {
+        return (
+            <Box w="100%" h="100%" bg={BG} display="flex" alignItems="center" justifyContent="center">
+                <Text fontSize="sm" color="whiteAlpha.500">
+                    Chargement...
+                </Text>
+            </Box>
+        );
+    }
+
+    if (view === "empty") {
+        return (
+            <Box w="100%" h="100%" bg={BG} display="flex" alignItems="center" justifyContent="center">
+                <VStack gap={4}>
+                    <LuFolderOpen size={36} color="rgba(255,255,255,0.15)" />
+                    <Text fontSize="sm" color="whiteAlpha.500">
+                        Sélectionnez un dossier de guides
+                    </Text>
+                    <HStack gap={3}>
+                        <Box
+                            as="button"
+                            display="flex"
+                            alignItems="center"
+                            gap={2}
+                            px={4}
+                            py={2}
+                            borderRadius="md"
+                            border="1px solid rgba(255,255,255,0.15)"
+                            color="whiteAlpha.800"
+                            bg="transparent"
+                            fontSize="sm"
+                            cursor="pointer"
+                            _hover={{ bg: "rgba(255,255,255,0.06)", color: "white" }}
+                            onClick={handlePickFolder}
+                        >
+                            <LuFolderOpen size={14} />
+                            Ouvrir un dossier
+                        </Box>
+                    </HStack>
+                </VStack>
+            </Box>
+        );
+    }
+
+    if (view === "list") {
+        return (
+            <GuideList
+                entries={entries}
+                progresses={progresses}
+                profileName={profileName}
+                onSelectGuide={handleSelectGuide}
+                onChangeFolder={handlePickFolder}
+                onLoadConf={handleLoadConf}
+            />
+        );
+    }
+
+    const currentProgress = progresses.find((p) => p.id === view.guide.id) ?? {
+        id: view.guide.id,
+        currentStep: 0,
+        steps: {},
+        updatedAt: new Date().toISOString(),
+    };
+
+    return (
+        <GuideViewer
+            guide={view.guide}
+            entry={view.entry}
+            progress={currentProgress}
+            onProgressChange={(patch) => handleProgressChange(view.guide.id, patch)}
+            onBack={handleBack}
+        />
+    );
+}

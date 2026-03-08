@@ -238,6 +238,23 @@ app.whenReady().then(async () => {
         return JSON.parse(raw);
     });
 
+    ipcMain.handle("pick-guides-folder", async () => {
+        const { filePaths, canceled } = await dialog.showOpenDialog({
+            title: "Sélectionner le dossier de guides",
+            properties: ["openDirectory"],
+        });
+        return canceled || !filePaths[0] ? null : filePaths[0];
+    });
+
+    ipcMain.handle("pick-guides-conf-file", async () => {
+        const { filePaths, canceled } = await dialog.showOpenDialog({
+            title: "Charger un fichier conf.json (Ganymede)",
+            filters: [{ name: "Ganymede Config", extensions: ["json"] }],
+            properties: ["openFile"],
+        });
+        return canceled || !filePaths[0] ? null : filePaths[0];
+    });
+
     ipcMain.handle("get-desktop-sources", () =>
         desktopCapturer.getSources({ types: ["window", "screen"] }),
     );
