@@ -2,9 +2,9 @@ import { Box, HStack, IconButton } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import { LuMinus, LuPin, LuX } from "react-icons/lu";
 
-export type AppTab = "map" | "viewer" | "quests";
+export type AppTab = "map" | "viewer" | "quests" | "admin";
 
-const TABS: { id: AppTab; label: string }[] = [
+const BASE_TABS: { id: AppTab; label: string }[] = [
     { id: "map", label: "MAP" },
     { id: "viewer", label: "VIEWER" },
     { id: "quests", label: "QUÊTES" },
@@ -16,9 +16,13 @@ const INACTIVE_COLOR = "rgba(255,255,255,0.38)";
 interface TitleBarProps {
     activeTab: AppTab;
     onTabChange: (tab: AppTab) => void;
+    showAdminTab?: boolean;
 }
 
-export const TitleBar = ({ activeTab, onTabChange }: TitleBarProps) => {
+export const TitleBar = ({ activeTab, onTabChange, showAdminTab }: TitleBarProps) => {
+    const tabs = showAdminTab
+        ? [...BASE_TABS, { id: "admin" as AppTab, label: "ADMIN" }]
+        : BASE_TABS;
     const [isPinned, setIsPinned] = useState(false);
 
     useEffect(() => {
@@ -79,7 +83,7 @@ export const TitleBar = ({ activeTab, onTabChange }: TitleBarProps) => {
                     alignItems="stretch"
                     style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
                 >
-                    {TABS.map((tab) => {
+                    {tabs.map((tab) => {
                         const isActive = activeTab === tab.id;
                         return (
                             <Box

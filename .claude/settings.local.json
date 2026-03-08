@@ -1,10 +1,5 @@
 {
-  "permissions": {
-    "allow": [
-      "WebSearch",
-      "WebFetch(domain:github.com)",
-      "Bash(sqlite3 /c/users/mledo/dev/dofus-db-claude/dofus.sqlite \".schema SubAreaData\")",
-      "Bash(sqlite3 /c/users/mledo/dev/dofus-db-claude/dofus.sqlite \".schema AreaData\")"
-    ]
-  }
+    "permissions": {
+        "allow": ["WebSearch", "WebFetch(domain:github.com)"]
+    }
 }

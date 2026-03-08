@@ -99,6 +99,8 @@ const api = {
     offInitStatus: (
         listener: (event: Electron.IpcRendererEvent, steps: { id: string; label: string; status: string; progress?: number }[]) => void,
     ) => ipcRenderer.off("init-status", listener),
+    getDofusVersion: (): Promise<string | null> => ipcRenderer.invoke("get-dofus-version"),
+    getAdminToken: (): Promise<string | null> => ipcRenderer.invoke("get-admin-token"),
 };
 
 export type AppApi = typeof api;

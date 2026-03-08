@@ -18,12 +18,18 @@ import { Toaster, toaster } from "./ui/toaster";
 import { useUpdateCheck } from "./useUpdateCheck";
 import { useMappingsSync } from "./useMappingsSync";
 import { CoordDisplay } from "./dofus-map/dofus-map.Grid";
+import { AdminPanel } from "./ui/AdminPanel";
 
 export function App() {
     const baseUrl = useBaseUrl();
     const [activeTab, setActiveTab] = useState<AppTab>("map");
+    const [adminToken, setAdminToken] = useState<string | null>(null);
     const updateInfo = useUpdateCheck();
     const mappingsSynced = useMappingsSync();
+
+    useEffect(() => {
+        window.api.getAdminToken().then(setAdminToken);
+    }, []);
 
     useEffect(() => {
         if (!mappingsSynced) return;
@@ -56,7 +62,7 @@ export function App() {
     return (
         <div className="app">
             <Toaster />
-            <TitleBar activeTab={activeTab} onTabChange={setActiveTab} />
+            <TitleBar activeTab={activeTab} onTabChange={setActiveTab} showAdminTab={!!adminToken} />
 
             {/* Map tab */}
             <div className="app-map" style={{ display: activeTab === "map" ? undefined : "none" }}>
@@ -99,6 +105,19 @@ export function App() {
             >
                 <QuestsPanel />
             </div>
+
+            {/* Admin tab */}
+            {adminToken && (
+                <div
+                    style={{
+                        display: activeTab === "admin" ? "flex" : "none",
+                        flex: 1,
+                        overflow: "hidden",
+                    }}
+                >
+                    <AdminPanel token={adminToken} />
+                </div>
+            )}
         </div>
     );
 }

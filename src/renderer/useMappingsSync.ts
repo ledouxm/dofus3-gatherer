@@ -19,7 +19,7 @@ export function useMappingsSync(): boolean {
             if (!cdnBaseUrl) return;
 
             try {
-                const remote: LatestMappings = await fetch(`${cdnBaseUrl}/latest-mappings.json`).then(
+                const remote: LatestMappings = await fetch(`${cdnBaseUrl}/mappings/latest`).then(
                     (r) => r.json(),
                 );
                 if (!remote?.timestamp || !remote?.mappings) return;

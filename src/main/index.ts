@@ -4,7 +4,7 @@ import { shell } from "electron/common";
 import path from "path";
 import { spawnSync, execSync } from "child_process";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
-import { getDb, makeDofusSqliteDb } from "./db";
+import { getDb, getDofusVersion, makeDofusSqliteDb } from "./db";
 import { makeSniffer } from "./sniffer/sniffer";
 import { initDofusProto } from "./init/dofus-proto";
 import protobuf from "protobufjs";
@@ -276,6 +276,18 @@ app.whenReady().then(async () => {
     ];
 
     ipcMain.handle("get-init-status", () => steps);
+
+    ipcMain.handle("get-dofus-version", () => getDofusVersion());
+
+    ipcMain.handle("get-admin-token", async () => {
+        const filePath = path.join(app.getPath("userData"), ".dofus-gatherer-admin");
+        try {
+            const content = await fs.readFile(filePath, "utf-8");
+            return content.trim() || null;
+        } catch {
+            return null;
+        }
+    });
 
     const updateStep = (id: string, update: Partial<InitStep>) => {
         const step = steps.find((s) => s.id === id)!;

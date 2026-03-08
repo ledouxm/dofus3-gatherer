@@ -15,6 +15,7 @@ const ensureDofusSqlite = async (onProgress?: (progress: number) => void) => {
     }
 
     const release = await releaseResponse.json();
+    ref.dofusVersion = release.tag_name ?? null;
     const sqliteAsset = release.assets.find((a: any) => a.name === "dofus.sqlite");
     if (!sqliteAsset) {
         throw new Error("dofus.sqlite asset not found in latest release");
@@ -58,7 +59,10 @@ const ensureDofusSqlite = async (onProgress?: (progress: number) => void) => {
 
 const ref = {
     db: null as any as Kysely<DB>,
+    dofusVersion: null as string | null,
 };
+
+export const getDofusVersion = () => ref.dofusVersion;
 
 export const makeDofusSqliteDb = async (onProgress?: (progress: number) => void) => {
     await ensureDofusSqlite(onProgress);
