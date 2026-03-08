@@ -9,13 +9,12 @@ import {
     IconButton,
     Input,
     Stack,
-    Switch,
     Text,
     Tooltip,
 } from "@chakra-ui/react";
 import { useState } from "react";
 import { LuDownload, LuExternalLink, LuInfo, LuSettings, LuUpload } from "react-icons/lu";
-import { useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
+import { useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import type { ConfigStore } from "../providers/store";
 import { OverlayIconButton } from "./OverlayIconButton";
 
@@ -48,19 +47,16 @@ const MAPPING_HELP: Record<keyof ConfigStore["mappings"], string> = {
 
 const ConfigModal = ({ open, onClose, onOpenViewer }: { open: boolean; onClose: () => void; onOpenViewer?: () => void }) => {
     const mappings = useMappings();
-    const config = useConfig();
     const updateConfig = useUpdateConfigMutation();
 
     const [draft, setDraft] = useState<ConfigStore["mappings"]>({ ...mappings });
-    const [copyOnClick, setCopyOnClick] = useState(config.copyCoordinatesOnClick !== false);
 
     const handleOpen = () => {
         setDraft({ ...mappings });
-        setCopyOnClick(config.copyCoordinatesOnClick !== false);
     };
 
     const handleSave = async () => {
-        await updateConfig.mutateAsync({ mappings: draft, copyCoordinatesOnClick: copyOnClick });
+        await updateConfig.mutateAsync({ mappings: draft });
         onClose();
     };
 
@@ -155,26 +151,6 @@ const ConfigModal = ({ open, onClose, onOpenViewer }: { open: boolean; onClose: 
                                         />
                                     ))}
                                 </Stack>
-                            </Box>
-
-                            {/* Map interaction */}
-                            <Box>
-                                <Heading size="sm" color="whiteAlpha.600" mb={4} textTransform="uppercase" letterSpacing="wider">
-                                    Map
-                                </Heading>
-                                <Flex align="center" justify="space-between">
-                                    <Text fontSize="sm" color="whiteAlpha.800">Copy /travel on cell click</Text>
-                                    <Switch.Root
-                                        checked={copyOnClick}
-                                        onCheckedChange={(e) => setCopyOnClick(e.checked)}
-                                        size="sm"
-                                    >
-                                        <Switch.HiddenInput />
-                                        <Switch.Control>
-                                            <Switch.Thumb />
-                                        </Switch.Control>
-                                    </Switch.Root>
-                                </Flex>
                             </Box>
 
                             {/* Viewer hint */}

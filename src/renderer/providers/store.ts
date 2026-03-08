@@ -20,6 +20,7 @@ export const appStore = store<AppStore>({
         worldmapMetadata: null,
         centerOnCharacter: true,
         selectedHintCategoryIds: [] as number[],
+        travelHandle: null,
     },
 });
 
@@ -46,6 +47,10 @@ export type ConfigStore = {
         history: Array<{ id: number; name: string; level: number; entranceMapId: number }>;
     };
     mappingsTimestamp?: string;
+    travel?: {
+        sendToProcess?: boolean;
+        selectedWindowTitle?: string;
+    };
 };
 
 export type TranslationStore = {
@@ -63,5 +68,6 @@ export type AppStore = {
         worldmapMetadata: Record<string, WorldmapMeta> | null;
         centerOnCharacter: boolean;
         selectedHintCategoryIds: number[];
+        travelHandle: number | null;
     };
 };

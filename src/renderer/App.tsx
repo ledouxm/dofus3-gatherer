@@ -11,7 +11,7 @@ import { ResourcePickerButton } from "./ui/ResourcePickerButton";
 import { type AppTab, TitleBar } from "./ui/TitleBar";
 import { WorldMapPickerButton } from "./ui/WorldMapPickerButton";
 import { HintsLayer } from "./dofus-map/HintsLayer";
-import { QuickActionsPanel } from "./ui/QuickActionsPanel";
+import { TravelButton } from "./ui/TravelButton";
 import { QuestsPanel } from "./ui/QuestsPanel";
 import { ViewerApp } from "./viewer/ViewerApp";
 import { Toaster, toaster } from "./ui/toaster";
@@ -75,17 +75,7 @@ export function App() {
                 <ResourcePickerButton />
                 <HintCategoryButtons />
                 <CenterOnCharacterButton />
-            </div>
-
-            {/* Actions tab */}
-            <div
-                style={{
-                    display: activeTab === "actions" ? "flex" : "none",
-                    flex: 1,
-                    overflow: "hidden",
-                }}
-            >
-                <QuickActionsPanel />
+                <TravelButton />
             </div>
 
             {/* Viewer tab */}

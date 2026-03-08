@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Polyline, useMapEvents } from "react-leaflet";
 import { useConfig } from "../providers/ConfigProvider";
+import { mapStore } from "../providers/store";
 import { toaster } from "../ui/toaster";
 import {
     getCellDimensions,
@@ -72,12 +73,23 @@ export function CoordDisplay({ meta }: { meta: WorldmapMeta }) {
             setMousePos(null);
         },
         click(e) {
-            if (config.copyCoordinatesOnClick === false) return;
+            const copyEnabled = config.copyCoordinatesOnClick !== false;
+            const sendEnabled = config.travel?.sendToProcess === true;
+            if (!copyEnabled && !sendEnabled) return;
             const c = worldToDofus({ x: e.latlng.lng, y: -e.latlng.lat }, meta);
             const text = `/travel ${Math.floor(c.posX)} ${Math.floor(c.posY)}`;
-            navigator.clipboard.writeText(text);
-            if (lastToastId.current) toaster.dismiss(lastToastId.current);
-            lastToastId.current = toaster.create({ title: <>Copied: <b>{text}</b></>, type: "success", duration: 2000 });
+            if (copyEnabled) {
+                navigator.clipboard.writeText(text);
+                if (lastToastId.current) toaster.dismiss(lastToastId.current);
+                lastToastId.current = toaster.create({ title: <>Copied: <b>{text}</b></>, type: "success", duration: 2000 });
+            }
+            if (sendEnabled) {
+                const handle = mapStore.get().travelHandle;
+                if (handle !== null) {
+                    if (!copyEnabled) navigator.clipboard.writeText(text);
+                    window.api.focusWindowAndSend(handle, "travel");
+                }
+            }
         },
     });
 
