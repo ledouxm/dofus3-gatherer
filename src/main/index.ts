@@ -322,7 +322,7 @@ app.whenReady().then(async () => {
                 }
             }
         }
-        data._raw = orderedFields.map((f) => f.name);
+        data._raw = orderedFields.map((f) => f.type);
     }
 
     let serverReassemblyBuffer = Buffer.alloc(0);
@@ -333,6 +333,10 @@ app.whenReady().then(async () => {
                 serverReassemblyBuffer,
                 Buffer.from(packet, "hex"),
             ]);
+            if (serverReassemblyBuffer.length > 5 * 1024 * 1024) {
+                serverReassemblyBuffer = Buffer.alloc(0);
+                return;
+            }
             const buffer = serverReassemblyBuffer as any as Uint8Array;
             const reader = protobuf.Reader.create(buffer);
             while (reader.pos < reader.len) {
@@ -361,17 +365,21 @@ app.whenReady().then(async () => {
                         const data = decoded.toJSON() as Record<string, any>;
                         addRaw(data, type);
                         const packetPayload = { typeName, data };
+                        console.log(typeName);
                         BrowserWindow.getAllWindows().forEach((w) => {
                             if (w.isDestroyed()) return;
                             w.webContents.send("server-packet/" + typeName, packetPayload);
                             w.webContents.send("server-packet-broadcast", packetPayload);
                         });
-                        console.log(typeName);
                     }
                 } catch (e) {
-                    console.log("error", e, Buffer.from(buffer).toString("hex"));
+                    console.log(
+                        "error",
+                        e,
+                        Buffer.from(packet, "hex").subarray(frameStart, frameEnd),
+                    );
                     if (frameEnd === frameStart) {
-                        serverReassemblyBuffer = Buffer.alloc(0);
+                        reader.pos = frameStart;
                         break;
                     }
                 }
