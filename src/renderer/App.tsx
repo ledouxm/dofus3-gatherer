@@ -16,12 +16,26 @@ import { QuestsPanel } from "./ui/QuestsPanel";
 import { ViewerApp } from "./viewer/ViewerApp";
 import { Toaster, toaster } from "./ui/toaster";
 import { useUpdateCheck } from "./useUpdateCheck";
+import { useMappingsSync } from "./useMappingsSync";
 import { CoordDisplay } from "./dofus-map/dofus-map.Grid";
 
 export function App() {
     const baseUrl = useBaseUrl();
     const [activeTab, setActiveTab] = useState<AppTab>("map");
     const updateInfo = useUpdateCheck();
+    const mappingsSynced = useMappingsSync();
+
+    useEffect(() => {
+        if (!mappingsSynced) return;
+        toaster.create({
+            id: "mappings-updated",
+            title: "Mappings updated",
+            description: "Packet mappings have been updated from the server.",
+            type: "success",
+            duration: 5000,
+            closable: true,
+        });
+    }, [mappingsSynced]);
 
     useEffect(() => {
         if (!updateInfo?.updateAvailable) return;

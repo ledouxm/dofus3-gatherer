@@ -45,6 +45,7 @@ export type ConfigStore = {
     quests?: {
         history: Array<{ id: number; name: string; level: number; entranceMapId: number }>;
     };
+    mappingsTimestamp?: string;
 };
 
 export type TranslationStore = {
