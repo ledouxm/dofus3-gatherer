@@ -148,7 +148,10 @@ app.whenReady().then(async () => {
 
     // Ensure config.json exists on first run
     const existingConfig = await readMainConfig(configDir);
-    await writeMainConfig(configDir, { ...existingConfig, cdnBaseUrl: existingConfig.cdnBaseUrl || env.VITE_CDN_BASE_URL || "" });
+    await writeMainConfig(configDir, {
+        ...existingConfig,
+        cdnBaseUrl: existingConfig.cdnBaseUrl || env.VITE_CDN_BASE_URL || "",
+    });
 
     if (!existingConfig.cdnBaseUrl && !env.VITE_CDN_BASE_URL) {
         const { response } = await dialog.showMessageBox({
@@ -322,15 +325,26 @@ app.whenReady().then(async () => {
         data._raw = orderedFields.map((f) => f.name);
     }
 
+    let serverReassemblyBuffer = Buffer.alloc(0);
+
     makeSniffer({
         onServerPacket: (packet) => {
-            const buffer = Buffer.from(packet, "hex") as any as Uint8Array;
+            serverReassemblyBuffer = Buffer.concat([
+                serverReassemblyBuffer,
+                Buffer.from(packet, "hex"),
+            ]);
+            const buffer = serverReassemblyBuffer as any as Uint8Array;
             const reader = protobuf.Reader.create(buffer);
             while (reader.pos < reader.len) {
+                const frameStart = reader.pos;
                 let frameEnd = reader.pos;
                 try {
                     const frameLen = reader.uint32();
                     frameEnd = reader.pos + frameLen;
+                    if (frameEnd > reader.len) {
+                        reader.pos = frameStart;
+                        break;
+                    }
                     const result = templateMessage.decode(buffer.subarray(reader.pos, frameEnd));
                     const json = result.toJSON() as {
                         event?: { data?: { typeUrl: string; value?: string } };
@@ -355,11 +369,15 @@ app.whenReady().then(async () => {
                         console.log(typeName);
                     }
                 } catch (e) {
-                    console.log("error", e);
-                    frameEnd = reader.len;
+                    console.log("error", e, Buffer.from(buffer).toString("hex"));
+                    if (frameEnd === frameStart) {
+                        serverReassemblyBuffer = Buffer.alloc(0);
+                        break;
+                    }
                 }
                 reader.pos = frameEnd;
             }
+            serverReassemblyBuffer = serverReassemblyBuffer.subarray(reader.pos);
         },
     });
 
