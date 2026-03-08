@@ -99,7 +99,7 @@ export function App() {
             {/* Quests tab */}
             <div
                 style={{
-                    display: activeTab === "quests" ? "flex" : "none",
+                    display: activeTab === "donjons" ? "flex" : "none",
                     flex: 1,
                     overflow: "hidden",
                 }}
