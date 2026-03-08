@@ -9,7 +9,7 @@ import type { GuideEntry, GuideFile, GuideProgress } from "./guides/types";
 
 const BG = "rgba(10, 12, 18, 0.92)";
 
-type View = "empty" | "list" | { kind: "viewer"; guide: GuideFile; entry: GuideEntry };
+type View = "empty" | "list" | { kind: "viewer"; guide: GuideFile; entry: GuideEntry; initialStep?: number };
 
 export function GuidesPanel() {
     const config = useConfig();
@@ -141,6 +141,15 @@ export function GuidesPanel() {
         setView({ kind: "viewer", guide: guide as GuideFile, entry });
     }, []);
 
+    const handleNavigateToGuide = useCallback(async (guideId: number, _stepIndex: number) => {
+        const entry = entries.find((e) => e.id === guideId);
+        if (!entry) return;
+        const guide = await window.api.readGuideFile(entry.filePath);
+        if (!guide) return;
+        const existingProgress = progresses.find((p) => p.id === guideId);
+        setView({ kind: "viewer", guide: guide as GuideFile, entry, initialStep: existingProgress?.currentStep ?? 0 });
+    }, [entries, progresses]);
+
     const handleBack = useCallback(() => {
         setView("list");
     }, []);
@@ -195,9 +204,16 @@ export function GuidesPanel() {
                 entries={entries}
                 progresses={progresses}
                 profileName={profileName}
+                folderPath={config?.guides?.folderPath ?? null}
                 onSelectGuide={handleSelectGuide}
                 onChangeFolder={handlePickFolder}
                 onLoadConf={handleLoadConf}
+                onEntriesChange={async () => {
+                    const folderPath = config?.guides?.folderPath;
+                    if (!folderPath) return;
+                    const loaded = await window.api.readGuidesFolder(folderPath).catch(() => []);
+                    setEntries(loaded as GuideEntry[]);
+                }}
             />
         );
     }
@@ -211,11 +227,14 @@ export function GuidesPanel() {
 
     return (
         <GuideViewer
+            key={view.guide.id}
             guide={view.guide}
             entry={view.entry}
             progress={currentProgress}
+            initialStep={view.initialStep}
             onProgressChange={(patch) => handleProgressChange(view.guide.id, patch)}
             onBack={handleBack}
+            onNavigateToGuide={handleNavigateToGuide}
         />
     );
 }

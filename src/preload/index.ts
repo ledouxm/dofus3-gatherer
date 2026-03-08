@@ -165,6 +165,10 @@ const api = {
             await fs.writeFile(confJsonPath, JSON.stringify(conf, null, 2), "utf-8");
         } catch {}
     },
+    fetchGuidesFromServer: (status: string): Promise<any[]> =>
+        ipcRenderer.invoke("fetch-guides-from-server", status),
+    downloadGuideFromServer: (guideId: number, folderPath: string): Promise<boolean> =>
+        ipcRenderer.invoke("download-guide-from-server", guideId, folderPath),
 };
 
 export type AppApi = typeof api;

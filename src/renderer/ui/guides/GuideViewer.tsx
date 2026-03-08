@@ -40,11 +40,13 @@ interface Props {
     progress: GuideProgress;
     onProgressChange: (patch: Partial<GuideProgress>) => void;
     onBack: () => void;
+    initialStep?: number;
+    onNavigateToGuide?: (guideId: number, stepIndex: number) => void;
 }
 
-export function GuideViewer({ guide, entry, progress, onProgressChange, onBack }: Props) {
+export function GuideViewer({ guide, entry, progress, onProgressChange, onBack, initialStep, onNavigateToGuide }: Props) {
     const [currentStep, setCurrentStep] = useState(() =>
-        Math.min(progress.currentStep, Math.max(0, guide.steps.length - 1)),
+        Math.min(initialStep ?? progress.currentStep, Math.max(0, guide.steps.length - 1)),
     );
 
     const step = guide.steps[currentStep];
@@ -159,6 +161,7 @@ export function GuideViewer({ guide, entry, progress, onProgressChange, onBack }
                         html={step.web_text}
                         checkedBoxes={checkedBoxes}
                         onCheckboxToggle={handleCheckboxToggle}
+                        onNavigateToGuide={onNavigateToGuide}
                     />
                 )}
             </Box>

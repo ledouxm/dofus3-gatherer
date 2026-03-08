@@ -2,6 +2,7 @@ import { Box } from "@chakra-ui/react";
 import parse, { type DOMNode, domToReact } from "html-react-parser";
 import type { Element } from "html-react-parser";
 import { useMemo } from "react";
+import { LuBookOpen } from "react-icons/lu";
 import { useClipboardToast } from "../useClipboardToast";
 
 const COORD_RE = /\[(-?\d+),\s*(-?\d+)\]/g;
@@ -25,6 +26,32 @@ function InlineCoordButton({ x, y, onCopy }: { x: number; y: number; onCopy: (te
             onClick={() => onCopy(`/travel ${x} ${y}`, `[${x},${y}]`)}
         >
             [{x},{y}]
+        </Box>
+    );
+}
+
+function GuideStepLink({ label, onClick }: { label: string; onClick: () => void }) {
+    return (
+        <Box
+            as="button"
+            display="inline-flex"
+            alignItems="center"
+            gap="3px"
+            bg="rgba(170,71,188,0.10)"
+            border="1px solid rgba(170,71,188,0.30)"
+            borderRadius="sm"
+            px="5px"
+            py="1px"
+            fontSize="xs"
+            fontWeight="bold"
+            color="rgba(210,130,230,0.95)"
+            cursor="pointer"
+            mx="2px"
+            _hover={{ bg: "rgba(170,71,188,0.20)", color: "rgb(230,160,245)" }}
+            onClick={onClick}
+        >
+            <LuBookOpen size={11} />
+            {label}
         </Box>
     );
 }
@@ -56,9 +83,10 @@ interface Props {
     html: string;
     checkedBoxes: number[];
     onCheckboxToggle: (index: number) => void;
+    onNavigateToGuide?: (guideId: number, stepIndex: number) => void;
 }
 
-export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle }: Props) {
+export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavigateToGuide }: Props) {
     const copy = useClipboardToast();
 
     const options = useMemo(() => {
@@ -152,6 +180,23 @@ export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle }: Props
                             display="block"
                             cursor={isExternal ? "pointer" : "default"}
                             onClick={() => isExternal && window.api.openExternal(src)}
+                        />
+                    );
+                }
+
+                // data-type="guide-step" — navigate to another guide at a specific step
+                if (el.attribs?.["data-type"] === "guide-step") {
+                    const guideId = parseInt(el.attribs["guideid"] ?? "0", 10);
+                    const stepNumber = parseInt(el.attribs["stepnumber"] ?? "1", 10);
+                    const stepId = parseInt(el.attribs["stepid"] ?? "0", 10);
+                    const label = el.attribs["label"] ?? el.attribs["guidename"] ?? "Guide";
+                    // stepId === 0 means "go to user's current step" → sentinel -1
+                    const stepIndex = stepId === 0 ? -1 : stepNumber - 1;
+                    return (
+                        <GuideStepLink
+                            key={`guide-step-${guideId}-${stepNumber}`}
+                            label={label}
+                            onClick={() => onNavigateToGuide?.(guideId, stepIndex)}
                         />
                     );
                 }

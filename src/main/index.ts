@@ -140,6 +140,12 @@ app.whenReady().then(async () => {
 
     app.on("browser-window-created", (_, window) => {
         optimizer.watchWindowShortcuts(window);
+        // Enable Ctrl+R reload in production builds
+        window.webContents.on("before-input-event", (_event, input) => {
+            if (input.type === "keyDown" && (input.control || input.meta) && input.key === "r") {
+                window.reload();
+            }
+        });
     });
 
     const configDir = path.join(process.env.USER_DATA_PATH!, "config");
@@ -253,6 +259,24 @@ app.whenReady().then(async () => {
             properties: ["openFile"],
         });
         return canceled || !filePaths[0] ? null : filePaths[0];
+    });
+
+    const GANYMEDE_API = "https://ganymede-app.com/api";
+
+    ipcMain.handle("fetch-guides-from-server", async (_e, status: string) => {
+        const url = status
+            ? `${GANYMEDE_API}/v2/guides?status=${status}`
+            : `${GANYMEDE_API}/v2/guides`;
+        return ofetch(url, { headers: { "User-Agent": "dofus3-gatherer" } });
+    });
+
+    ipcMain.handle("download-guide-from-server", async (_e, guideId: number, folderPath: string) => {
+        const guide = await ofetch(`${GANYMEDE_API}/v2/guides/${guideId}`, {
+            headers: { "User-Agent": "dofus3-gatherer" },
+        });
+        const dest = path.join(folderPath, `${guideId}.json`);
+        await fs.writeFile(dest, JSON.stringify(guide, null, 2), "utf-8");
+        return true;
     });
 
     ipcMain.handle("get-desktop-sources", () =>
