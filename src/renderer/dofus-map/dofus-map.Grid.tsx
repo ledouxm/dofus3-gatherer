@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Polyline, useMapEvents } from "react-leaflet";
+import { useEffect, useRef, useState } from "react";
+import { Polyline, useMap, useMapEvents } from "react-leaflet";
 import { useConfig } from "../providers/ConfigProvider";
 import { mapStore } from "../providers/store";
 import { toaster } from "../ui/toaster";
@@ -57,11 +57,20 @@ export function MapGrid({ meta }: { meta: WorldmapMeta }) {
     return <>{lines}</>;
 }
 
+const TRAVEL_CURSOR = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='32' viewBox='0 0 24 32'%3E%3Cpath d='M12 0 C5.4 0 0 5.4 0 12 C0 20 12 32 12 32 C12 32 24 20 24 12 C24 5.4 18.6 0 12 0Z' fill='black' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='4' fill='white'/%3E%3C/svg%3E") 12 32, pointer`;
+
 export function CoordDisplay({ meta }: { meta: WorldmapMeta }) {
     const [coord, setCoord] = useState<DofusCoord | null>(null);
     const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
     const config = useConfig();
     const lastToastId = useRef<string | undefined>(undefined);
+    const map = useMap();
+    const travelMode = config.travel?.sendToProcess === true;
+
+    useEffect(() => {
+        map.getContainer().style.cursor = travelMode ? TRAVEL_CURSOR : "";
+        return () => { map.getContainer().style.cursor = ""; };
+    }, [travelMode, map]);
 
     useMapEvents({
         mousemove(e) {
@@ -108,7 +117,7 @@ export function CoordDisplay({ meta }: { meta: WorldmapMeta }) {
                 position: "fixed",
                 left: mousePos.x + 14,
                 top: mousePos.y + 14,
-                zIndex: 1000,
+                zIndex: 500,
                 background: "rgba(0,0,0,0.7)",
                 padding: "2px 8px",
                 borderRadius: 4,

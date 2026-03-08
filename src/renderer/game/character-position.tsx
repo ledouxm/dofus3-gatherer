@@ -141,12 +141,18 @@ export const CenterOnCharacterButton = () => {
                 variant="solid"
                 borderRadius="md"
                 bg="rgba(10, 12, 18, 0.85)"
-                _hover={{ bg: "rgba(30, 35, 50, 0.95)" }}
                 border="1px solid rgba(255,255,255,0.1)"
                 h="36px"
                 w="36px"
                 minW="36px"
                 color={centerOnCharacter ? "blue.400" : "whiteAlpha.500"}
+                transition="transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease"
+                _hover={{
+                    bg: "rgba(30, 35, 50, 0.95)",
+                    transform: "scale(1.1)",
+                    boxShadow: "0 0 10px rgba(255,255,255,0.12)",
+                    borderColor: "rgba(255,255,255,0.22)",
+                }}
                 onClick={toggle}
             >
                 {centerOnCharacter ? <LuLocateFixed /> : <LuLocate />}
