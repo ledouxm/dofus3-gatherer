@@ -1,11 +1,26 @@
 import { Box, HStack, Text, VStack } from "@chakra-ui/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LuFolderOpen } from "react-icons/lu";
-import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
+import { useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
+import { useDofusEvent } from "../useDofusEvent";
 import { buildProgressPatch } from "./guides/progressUtils";
 import { GuideList } from "./guides/GuideList";
 import { GuideViewer } from "./guides/GuideViewer";
 import type { GuideEntry, GuideFile, GuideProgress } from "./guides/types";
+
+// Extract questids from quest-blocks with status="end" in a step's HTML
+function extractEndQuestIds(html: string): number[] {
+    const tagRe = /<div[^>]*data-type="quest-block"[^>]*>/g;
+    const ids: number[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = tagRe.exec(html)) !== null) {
+        const tag = m[0];
+        if (!tag.includes('status="end"')) continue;
+        const idMatch = /questid="(\d+)"/.exec(tag);
+        if (idMatch) ids.push(parseInt(idMatch[1], 10));
+    }
+    return ids;
+}
 
 const BG = "rgba(10, 12, 18, 0.92)";
 
@@ -13,7 +28,11 @@ type View = "empty" | "list" | { kind: "viewer"; guide: GuideFile; entry: GuideE
 
 export function GuidesPanel() {
     const config = useConfig();
+    const mappings = useMappings();
     const updateConfig = useUpdateConfigMutation();
+
+    // questId (from guide HTML) → [{guideId, stepIndex}]
+    const questIndexRef = useRef<Map<number, Array<{ guideId: number; stepIndex: number }>>>(new Map());
 
     const [view, setView] = useState<View>("empty");
     const [entries, setEntries] = useState<GuideEntry[]>([]);
@@ -25,6 +44,37 @@ export function GuidesPanel() {
     const [profileName, setProfileName] = useState<string | null>(null);
 
     const hasLoaded = useRef(false);
+
+    // TODO: fill in once the quest-finished packet format is confirmed
+    const questFinishedPacket = mappings?.QuestFinishedMessage ?? null;
+    const questIdField = mappings?.["QuestFinishedMessage.questId"] ?? null;
+
+    useDofusEvent(questFinishedPacket, (data: any) => {
+        if (!questIdField) return;
+        const questId = Number(data[questIdField]);
+        if (!questId) return;
+        const hits = questIndexRef.current.get(questId) ?? [];
+        for (const { guideId, stepIndex } of hits) {
+            handleProgressChange(guideId, { currentStep: stepIndex + 1 });
+        }
+    });
+
+    const buildQuestIndex = useCallback(async (loadedEntries: GuideEntry[]) => {
+        const index = new Map<number, Array<{ guideId: number; stepIndex: number }>>();
+        await Promise.all(
+            loadedEntries.map(async (entry) => {
+                const guide = await window.api.readGuideFile(entry.filePath).catch(() => null);
+                if (!guide) return;
+                (guide as GuideFile).steps.forEach((step, si) => {
+                    for (const qid of extractEndQuestIds(step.web_text)) {
+                        if (!index.has(qid)) index.set(qid, []);
+                        index.get(qid)!.push({ guideId: entry.id, stepIndex: si });
+                    }
+                });
+            }),
+        );
+        questIndexRef.current = index;
+    }, []);
 
     // Convert internal configStore progress map to array
     const internalProgressesToArray = useCallback((): GuideProgress[] => {
@@ -46,6 +96,7 @@ export function GuidesPanel() {
             const loaded = await window.api.readGuidesFolder(folderPath).catch(() => []);
             setEntries(loaded as GuideEntry[]);
             setView("list");
+            buildQuestIndex(loaded as GuideEntry[]);
 
             // Load conf.json if previously selected
             if (savedConfPath) {
@@ -79,6 +130,7 @@ export function GuidesPanel() {
             const loaded = await window.api.readGuidesFolder(folderPath);
             setEntries(loaded as GuideEntry[]);
             setView("list");
+            buildQuestIndex(loaded as GuideEntry[]);
             updateConfig.mutate({
                 guides: {
                     ...(config?.guides ?? { progress: {} }),

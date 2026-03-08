@@ -1,6 +1,7 @@
 import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
 import { useCallback, useState } from "react";
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
+import { mapStore } from "../../providers/store";
 import { useClipboardToast } from "../useClipboardToast";
 import { GuideHtmlContent } from "./GuideHtmlContent";
 import type { GuideEntry, GuideFile, GuideProgress } from "./types";
@@ -10,6 +11,11 @@ const BG = "rgba(10, 12, 18, 0.92)";
 
 function MapCoordsButton({ x, y }: { x: number; y: number }) {
     const copy = useClipboardToast();
+    const travel = () => {
+        copy(`/travel ${x} ${y}`, `[${x},${y}]`);
+        const handle = mapStore.get().travelHandle;
+        if (handle) window.api.focusWindowAndSend(handle, "travel");
+    };
     return (
         <Box
             as="button"
@@ -20,6 +26,7 @@ function MapCoordsButton({ x, y }: { x: number; y: number }) {
             p={0}
             cursor="pointer"
             onClick={() => copy(`/travel ${x} ${y}`, `[${x},${y}]`)}
+            onDoubleClick={travel}
         >
             <Text
                 fontSize="xs"
@@ -48,7 +55,6 @@ export function GuideViewer({ guide, entry, progress, onProgressChange, onBack, 
     const [currentStep, setCurrentStep] = useState(() =>
         Math.min(initialStep ?? progress.currentStep, Math.max(0, guide.steps.length - 1)),
     );
-
     const step = guide.steps[currentStep];
     const isFirst = currentStep === 0;
     const isLast = currentStep === guide.steps.length - 1;

@@ -3,11 +3,17 @@ import parse, { type DOMNode, domToReact } from "html-react-parser";
 import type { Element } from "html-react-parser";
 import { useMemo } from "react";
 import { LuBookOpen } from "react-icons/lu";
+import { mapStore } from "../../providers/store";
 import { useClipboardToast } from "../useClipboardToast";
 
 const COORD_RE = /\[(-?\d+),\s*(-?\d+)\]/g;
 
 function InlineCoordButton({ x, y, onCopy }: { x: number; y: number; onCopy: (text: string, label: string) => void }) {
+    const travel = () => {
+        onCopy(`/travel ${x} ${y}`, `[${x},${y}]`);
+        const handle = mapStore.get().travelHandle;
+        if (handle) window.api.focusWindowAndSend(handle, "travel");
+    };
     return (
         <Box
             as="button"
@@ -24,6 +30,7 @@ function InlineCoordButton({ x, y, onCopy }: { x: number; y: number; onCopy: (te
             mx="2px"
             _hover={{ bg: "rgba(212,240,0,0.18)" }}
             onClick={() => onCopy(`/travel ${x} ${y}`, `[${x},${y}]`)}
+            onDoubleClick={travel}
         >
             [{x},{y}]
         </Box>
@@ -234,7 +241,7 @@ export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavig
             },
         };
         return opts;
-    }, [checkedBoxes, onCheckboxToggle, copy]);
+    }, [checkedBoxes, onCheckboxToggle, copy, onNavigateToGuide]);
 
     return (
         <Box

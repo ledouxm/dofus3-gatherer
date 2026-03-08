@@ -39,6 +39,10 @@ const MAPPING_HELP: Record<keyof ConfigStore["mappings"], string> = {
         "The obfuscated packet type name emitted by the server when the character changes map. Example: \"isj\".",
     "CurrentMapMessage.mapId":
         "The field key inside that packet's JSON data that contains the map ID. Example: \"mapId\" or \"a\".",
+    QuestFinishedMessage:
+        "The obfuscated packet type name emitted by the server when a quest is completed. Used to auto-advance guide progress.",
+    "QuestFinishedMessage.questId":
+        "The field key inside that packet's JSON data that contains the quest ID.",
 };
 
 const ConfigModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {

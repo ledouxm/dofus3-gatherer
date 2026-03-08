@@ -7,6 +7,8 @@ export const appStore = store<AppStore>({
         mappings: {
             CurrentMapMessage: null,
             "CurrentMapMessage.mapId": null,
+            QuestFinishedMessage: null,
+            "QuestFinishedMessage.questId": null,
         },
         cdnBaseUrl: undefined,
     },
@@ -33,6 +35,8 @@ export type ConfigStore = {
     mappings: {
         CurrentMapMessage: string | null;
         "CurrentMapMessage.mapId": string | null;
+        QuestFinishedMessage: string | null;
+        "QuestFinishedMessage.questId": string | null;
     };
     cdnBaseUrl?: string;
     selectedResourceIds?: number[];

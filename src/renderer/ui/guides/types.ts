@@ -26,6 +26,20 @@ export interface GuideEntry {
     lang?: string;
 }
 
+export interface QuestDbStep {
+    stepId: number;
+    stepName: string | null;
+    stepDescription: string | null;
+}
+
+export interface QuestDbData {
+    questId: number;
+    questName: string | null;
+    steps: QuestDbStep[];
+}
+
+export type QuestDbMap = Record<number, QuestDbData>;
+
 export interface GuideStepProgress {
     checkboxes: number[];
 }
