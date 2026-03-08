@@ -13,27 +13,23 @@ import {
     Tooltip,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import { LuDownload, LuExternalLink, LuInfo, LuSettings, LuUpload } from "react-icons/lu";
-import { useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
+import { LuDownload, LuInfo, LuSettings, LuUpload } from "react-icons/lu";
+import { useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import type { ConfigStore } from "../providers/store";
 import { OverlayIconButton } from "./OverlayIconButton";
 
 /**
- * Config button + modal for editing `config.mappings`.
+ * Config button + modal for editing `config.mappings` and `config.cdnBaseUrl`.
  * Positioned above the WorldMapPickerButton (bottom: 96px).
- *
- * Also provides an entry point to open the Packet Viewer window,
- * which helps users find correct obfuscated packet names by recording
- * live Dofus traffic and replaying it synchronized with a screen capture.
  */
-export const ConfigButton = ({ onOpenViewer }: { onOpenViewer?: () => void }) => {
+export const ConfigButton = () => {
     const [open, setOpen] = useState(false);
     return (
         <>
             <OverlayIconButton aria-label="Configuration" bottom="96px" left="8px" onClick={() => setOpen(true)}>
                 <LuSettings />
             </OverlayIconButton>
-            <ConfigModal open={open} onClose={() => setOpen(false)} onOpenViewer={onOpenViewer} />
+            <ConfigModal open={open} onClose={() => setOpen(false)} />
         </>
     );
 };
@@ -45,19 +41,29 @@ const MAPPING_HELP: Record<keyof ConfigStore["mappings"], string> = {
         "The field key inside that packet's JSON data that contains the map ID. Example: \"mapId\" or \"a\".",
 };
 
-const ConfigModal = ({ open, onClose, onOpenViewer }: { open: boolean; onClose: () => void; onOpenViewer?: () => void }) => {
+const ConfigModal = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
     const mappings = useMappings();
+    const config = useConfig();
     const updateConfig = useUpdateConfigMutation();
 
     const [draft, setDraft] = useState<ConfigStore["mappings"]>({ ...mappings });
+    const [cdnUrl, setCdnUrl] = useState(config.cdnBaseUrl ?? "");
+    const [editingCdn, setEditingCdn] = useState(false);
 
     const handleOpen = () => {
         setDraft({ ...mappings });
+        setCdnUrl(config.cdnBaseUrl ?? "");
+        setEditingCdn(false);
     };
 
     const handleSave = async () => {
         await updateConfig.mutateAsync({ mappings: draft });
         onClose();
+    };
+
+    const handleSaveCdn = async () => {
+        await updateConfig.mutateAsync({ cdnBaseUrl: cdnUrl });
+        setEditingCdn(false);
     };
 
     const handleExport = () => {
@@ -90,11 +96,6 @@ const ConfigModal = ({ open, onClose, onOpenViewer }: { open: boolean; onClose: 
             reader.readAsText(file);
         };
         input.click();
-    };
-
-    const openViewer = () => {
-        onClose();
-        onOpenViewer?.();
     };
 
     return (
@@ -153,28 +154,34 @@ const ConfigModal = ({ open, onClose, onOpenViewer }: { open: boolean; onClose: 
                                 </Stack>
                             </Box>
 
-                            {/* Viewer hint */}
-                            <Box
-                                bg="whiteAlpha.50"
-                                borderRadius="md"
-                                border="1px solid"
-                                borderColor="whiteAlpha.100"
-                                p={4}
-                            >
-                                <Text fontSize="sm" color="whiteAlpha.700" mb={3}>
-                                    Not sure what the obfuscated names are? Use the Packet Viewer to record live
-                                    traffic and replay it frame-by-frame alongside a screen capture of Dofus.
-                                </Text>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    colorScheme="blue"
-                                    onClick={openViewer}
-                                    gap={2}
-                                >
-                                    <LuExternalLink />
-                                    Open Packet Viewer
-                                </Button>
+                            {/* CDN URL */}
+                            <Box>
+                                <Heading size="sm" color="whiteAlpha.600" textTransform="uppercase" letterSpacing="wider" mb={4}>
+                                    CDN URL
+                                </Heading>
+                                <Flex gap={2} align="center">
+                                    <Input
+                                        size="sm"
+                                        value={cdnUrl}
+                                        onChange={(e) => setCdnUrl(e.target.value)}
+                                        disabled={!editingCdn}
+                                        fontFamily="mono"
+                                        bg="whiteAlpha.50"
+                                        border="1px solid"
+                                        borderColor="whiteAlpha.200"
+                                        _focus={{ borderColor: "blue.400", bg: "whiteAlpha.100" }}
+                                        flex={1}
+                                    />
+                                    {editingCdn ? (
+                                        <Button size="sm" colorScheme="blue" onClick={handleSaveCdn} loading={updateConfig.isPending}>
+                                            Save
+                                        </Button>
+                                    ) : (
+                                        <Button size="sm" variant="outline" onClick={() => setEditingCdn(true)}>
+                                            Edit
+                                        </Button>
+                                    )}
+                                </Flex>
                             </Box>
                         </Stack>
                     </Dialog.Body>

@@ -70,7 +70,7 @@ export function App() {
                         </>
                     )}
                 </DofusLeafletMap>
-                <ConfigButton onOpenViewer={() => setActiveTab("viewer")} />
+                <ConfigButton />
                 <WorldMapPickerButton />
                 <ResourcePickerButton />
                 <HintCategoryButtons />
