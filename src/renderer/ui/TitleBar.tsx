@@ -43,10 +43,11 @@ export const TitleBar = ({ activeTab, onTabChange }: TitleBarProps) => {
             borderBottom="1px solid rgba(255,255,255,0.08)"
         >
             <HStack w="full" justifyContent="space-between" gap={0} alignItems="stretch">
-                {/* Pin button */}
-                <Box
-                    display="flex"
+                {/* Left side: pin + DEV badge */}
+                <HStack
+                    gap={0}
                     alignItems="center"
+                    flex={1}
                     style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
                 >
                     <IconButton
@@ -60,7 +61,21 @@ export const TitleBar = ({ activeTab, onTabChange }: TitleBarProps) => {
                     >
                         <LuPin />
                     </IconButton>
-                </Box>
+                    {import.meta.env.DEV && (
+                        <Box
+                            display="flex"
+                            alignItems="center"
+                            px="6px"
+                            fontSize="10px"
+                            fontWeight="700"
+                            letterSpacing="0.12em"
+                            color={ACTIVE_COLOR}
+                            userSelect="none"
+                        >
+                            DEV
+                        </Box>
+                    )}
+                </HStack>
 
                 {/* Tab triggers */}
                 <HStack
@@ -102,6 +117,8 @@ export const TitleBar = ({ activeTab, onTabChange }: TitleBarProps) => {
                 <HStack
                     gap={0}
                     alignItems="center"
+                    flex={1}
+                    justifyContent="flex-end"
                     style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
                 >
                     <IconButton
