@@ -3,19 +3,22 @@
         "**/node_modules/**": true,
         "**/old/**": true,
         "**/build/**": true,
-        "**/out/**": true
+        "**/out/**": true,
+        "**/ganymede-app/**": true
     },
     "files.exclude": {
         "**/node_modules": true,
         "**/old": true,
         "**/build": true,
-        "**/out": true
+        "**/out": true,
+        "ganymede-app": true
     },
     "search.exclude": {
         "**/node_modules": true,
         "**/old": true,
         "**/build": true,
-        "**/out": true
+        "**/out": true,
+        "**/ganymede-app": true
     },
     "typescript.preferences.includePackageJsonAutoImports": "off"
 }
