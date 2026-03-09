@@ -29,6 +29,45 @@ async function writeMainConfig(configDir: string, config: any): Promise<void> {
     await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
 }
 
+async function syncLatestMappings(
+    configDir: string,
+    cdnBaseUrl: string,
+): Promise<{ updated: boolean; mappings?: any; timestamp?: string }> {
+    if (!cdnBaseUrl) {
+        console.log("[mappings-sync] No CDN base URL, skipping.");
+        return { updated: false };
+    }
+    try {
+        console.log("[mappings-sync] Fetching from", `${cdnBaseUrl}/mappings/latest`);
+        const remote = await ofetch(`${cdnBaseUrl}/mappings/latest`, {
+            headers: { "User-Agent": "dofus3-gatherer" },
+        });
+        console.log("[mappings-sync] Remote response:", JSON.stringify(remote));
+        if (!remote?.timestamp || !remote?.mappings) {
+            console.log("[mappings-sync] Invalid response shape, skipping.");
+            return { updated: false };
+        }
+        const config = await readMainConfig(configDir);
+        const localTimestamp = config.mappingsTimestamp;
+        console.log("[mappings-sync] Local timestamp:", localTimestamp, "/ Remote:", remote.timestamp);
+        if (localTimestamp && localTimestamp >= remote.timestamp) {
+            console.log("[mappings-sync] Already up to date.");
+            return { updated: false };
+        }
+        const updatedConfig = {
+            ...config,
+            mappings: { ...(config.mappings ?? {}), ...remote.mappings },
+            mappingsTimestamp: remote.timestamp,
+        };
+        await writeMainConfig(configDir, updatedConfig);
+        console.log("[mappings-sync] Mappings updated to", remote.timestamp, ":", JSON.stringify(updatedConfig.mappings));
+        return { updated: true, mappings: updatedConfig.mappings, timestamp: remote.timestamp };
+    } catch (err) {
+        console.error("[mappings-sync] Error:", err);
+        return { updated: false };
+    }
+}
+
 async function fetchRecoltable(cdnBaseUrl: string, resource: string): Promise<any[]> {
     const url = `${cdnBaseUrl}/recoltables/recoltables-${resource}.json`;
     const result = await ofetch(url).catch(() => null);
@@ -193,7 +232,12 @@ app.whenReady().then(async () => {
         return;
     }
 
+    // Start mappings sync in background (non-blocking)
+    const cdnBaseUrl = existingConfig.cdnBaseUrl || env.VITE_CDN_BASE_URL || "";
+    const mappingsSyncPromise = syncLatestMappings(configDir, cdnBaseUrl);
+
     // Register IPC handlers up front (sql is guarded by getDb() throwing if not ready)
+    ipcMain.handle("get-mappings-sync-result", () => mappingsSyncPromise);
     ipcMain.handle("get-app-version", () => app.getVersion());
     ipcMain.handle("open-external", (_event, url: string) => shell.openExternal(url));
     ipcMain.handle("sql", (_event, query) => getDb().executeQuery(query));

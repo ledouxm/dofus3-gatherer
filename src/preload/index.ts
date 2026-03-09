@@ -112,6 +112,8 @@ const api = {
     ) => ipcRenderer.off("init-status", listener),
     getDofusVersion: (): Promise<string | null> => ipcRenderer.invoke("get-dofus-version"),
     getAdminToken: (): Promise<string | null> => ipcRenderer.invoke("get-admin-token"),
+    getMappingsSyncResult: (): Promise<{ updated: boolean; mappings?: Record<string, string>; timestamp?: string }> =>
+        ipcRenderer.invoke("get-mappings-sync-result"),
     pickGanymedeFolder: (): Promise<string | null> => ipcRenderer.invoke("pick-ganymede-folder"),
     getDefaultGanymedePath: (): Promise<string | null> => ipcRenderer.invoke("get-default-ganymede-path"),
     readGuidesFolder: async (folderPath: string): Promise<any[]> => {
