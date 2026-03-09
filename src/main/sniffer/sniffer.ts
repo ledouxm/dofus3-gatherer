@@ -39,32 +39,48 @@ export const makeSniffer = ({
     serverC.setMinBytes && serverC.setMinBytes(0);
     clientC.setMinBytes && clientC.setMinBytes(0);
 
+    let serverNextSeqno: number | null = null;
+
     serverC.on("packet", () => {
-        const str = getHexString({
+        const result = getTcpPayload({
             linkType: serverLinkType,
             decoders,
             buffer: serverBuffer,
             PROTOCOL,
         });
-        if (!str?.length) return;
+        if (!result || !result.str.length) return;
+
+        const { str, seqno, datalen } = result;
+        const seqnoEnd = (seqno + datalen) >>> 0;
+
+        if (serverNextSeqno !== null) {
+            const delta = (seqnoEnd - serverNextSeqno) >>> 0;
+            if (delta === 0 || delta > 0x80000000) return; // retransmission or no new data
+        }
+        serverNextSeqno = seqnoEnd;
 
         onServerPacket && onServerPacket(str);
     });
+
     clientC.on("packet", () => {
-        const str = getHexString({
+        const str = getTcpPayload({
             linkType: clientLinkType,
             decoders,
             buffer: clientBuffer,
             PROTOCOL,
-        });
+        })?.str;
         if (!str?.length) return;
 
         onClientPacket && onClientPacket(str);
     });
 };
 
-const getHexString = ({ linkType, decoders, buffer, PROTOCOL }: any) => {
-    // console.log("packet: length " + nbytes + " bytes, truncated? " + (trunc ? "yes" : "no"));
+const getTcpPayload = ({
+    linkType,
+    decoders,
+    buffer,
+    PROTOCOL,
+}: any): { str: string; seqno: number; datalen: number } | undefined => {
     if (linkType === "ETHERNET") {
         var ret = decoders.Ethernet(buffer);
 
@@ -78,9 +94,8 @@ const getHexString = ({ linkType, decoders, buffer, PROTOCOL }: any) => {
                 datalen -= ret.hdrlen;
 
                 const str = buffer.toString("hex", ret.offset, datalen + ret.offset);
-                if (!str.length) return;
 
-                return str;
+                return { str, seqno: ret.info.seqno, datalen };
             } else if (ret.info.protocol === PROTOCOL.IP.UDP) {
                 ret = decoders.UDP(buffer, ret.offset);
             } else console.log("Unsupported IPv4 protocol: " + PROTOCOL.IP[ret.info.protocol]);
