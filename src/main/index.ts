@@ -325,21 +325,23 @@ app.whenReady().then(async () => {
         return JSON.parse(raw);
     });
 
-    ipcMain.handle("pick-guides-folder", async () => {
+    ipcMain.handle("pick-ganymede-folder", async () => {
         const { filePaths, canceled } = await dialog.showOpenDialog({
-            title: "Sélectionner le dossier de guides",
+            title: "Sélectionner le dossier Ganymede",
             properties: ["openDirectory"],
         });
         return canceled || !filePaths[0] ? null : filePaths[0];
     });
 
-    ipcMain.handle("pick-guides-conf-file", async () => {
-        const { filePaths, canceled } = await dialog.showOpenDialog({
-            title: "Charger un fichier conf.json (Ganymede)",
-            filters: [{ name: "Ganymede Config", extensions: ["json"] }],
-            properties: ["openFile"],
-        });
-        return canceled || !filePaths[0] ? null : filePaths[0];
+    ipcMain.handle("get-default-ganymede-path", async () => {
+        const appData = app.getPath("appData");
+        const candidate = path.join(appData, "com.ganymede.ganymede-app");
+        try {
+            await fs.access(path.join(candidate, "conf.json"));
+            return candidate;
+        } catch {
+            return null;
+        }
     });
 
     const GANYMEDE_API = "https://ganymede-app.com/api";

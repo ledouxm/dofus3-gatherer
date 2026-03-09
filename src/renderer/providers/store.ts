@@ -57,8 +57,7 @@ export type ConfigStore = {
         selectedWindowTitle?: string;
     };
     guides?: {
-        folderPath?: string;
-        confJsonPath?: string;
+        ganymedePath?: string;
         progress: { [guideId: string]: GuideProgress };
     };
 };

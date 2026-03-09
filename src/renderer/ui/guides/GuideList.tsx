@@ -1,7 +1,7 @@
 import { Box, HStack, Input, Spinner, Text } from "@chakra-ui/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import { LuChevronRight, LuDownload, LuFileJson, LuFolderOpen, LuRefreshCw } from "react-icons/lu";
+import { LuChevronRight, LuDownload, LuFolderOpen, LuRefreshCw } from "react-icons/lu";
 import type { GuideEntry, GuideProgress } from "./types";
 
 const BORDER = "1px solid rgba(255,255,255,0.08)";
@@ -29,7 +29,6 @@ interface Props {
     folderPath: string | null;
     onSelectGuide: (entry: GuideEntry) => void;
     onChangeFolder: () => void;
-    onLoadConf: () => void;
     onEntriesChange: () => Promise<void>;
 }
 
@@ -50,7 +49,7 @@ function GuideNodeImage({ src }: { src: string | null | undefined }) {
     );
 }
 
-export function GuideList({ entries, progresses, profileName, folderPath, onSelectGuide, onChangeFolder, onLoadConf, onEntriesChange }: Props) {
+export function GuideList({ entries, progresses, profileName, folderPath, onSelectGuide, onChangeFolder, onEntriesChange }: Props) {
     const queryClient = useQueryClient();
     const [tab, setTab] = useState<"local" | "download">("local");
     const [search, setSearch] = useState("");
@@ -72,7 +71,8 @@ export function GuideList({ entries, progresses, profileName, folderPath, onSele
     const downloadMutation = useMutation({
         mutationFn: async (guide: ServerGuide) => {
             if (!folderPath) throw new Error("Aucun dossier sélectionné");
-            await window.api.downloadGuideFromServer(guide.id, folderPath);
+            const guidesDir = folderPath.replace(/[\\/]$/, "") + "/guides";
+            await window.api.downloadGuideFromServer(guide.id, guidesDir);
             return guide.id;
         },
         onSuccess: async (guideId) => {
@@ -116,26 +116,6 @@ export function GuideList({ entries, progresses, profileName, folderPath, onSele
                                 alignItems="center"
                                 gap={1}
                                 fontSize="11px"
-                                color={profileName ? "#d4f000" : "whiteAlpha.500"}
-                                bg="transparent"
-                                border="none"
-                                cursor="pointer"
-                                px={2}
-                                py={1}
-                                borderRadius="md"
-                                title="Charger un conf.json Ganymede"
-                                _hover={{ color: "whiteAlpha.700", bg: "rgba(255,255,255,0.04)" }}
-                                onClick={onLoadConf}
-                            >
-                                <LuFileJson size={12} />
-                                conf.json
-                            </Box>
-                            <Box
-                                as="button"
-                                display="flex"
-                                alignItems="center"
-                                gap={1}
-                                fontSize="11px"
                                 color="whiteAlpha.500"
                                 bg="transparent"
                                 border="none"
@@ -143,6 +123,7 @@ export function GuideList({ entries, progresses, profileName, folderPath, onSele
                                 px={2}
                                 py={1}
                                 borderRadius="md"
+                                title="Changer le dossier Ganymede"
                                 _hover={{ color: "whiteAlpha.700", bg: "rgba(255,255,255,0.04)" }}
                                 onClick={onChangeFolder}
                             >

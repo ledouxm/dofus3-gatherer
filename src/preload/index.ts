@@ -112,7 +112,8 @@ const api = {
     ) => ipcRenderer.off("init-status", listener),
     getDofusVersion: (): Promise<string | null> => ipcRenderer.invoke("get-dofus-version"),
     getAdminToken: (): Promise<string | null> => ipcRenderer.invoke("get-admin-token"),
-    pickGuidesFolder: (): Promise<string | null> => ipcRenderer.invoke("pick-guides-folder"),
+    pickGanymedeFolder: (): Promise<string | null> => ipcRenderer.invoke("pick-ganymede-folder"),
+    getDefaultGanymedePath: (): Promise<string | null> => ipcRenderer.invoke("get-default-ganymede-path"),
     readGuidesFolder: async (folderPath: string): Promise<any[]> => {
         const entries: any[] = [];
         try {
@@ -146,7 +147,6 @@ const api = {
             return null;
         }
     },
-    pickGuidesConfFile: (): Promise<string | null> => ipcRenderer.invoke("pick-guides-conf-file"),
     readGuidesConf: async (confJsonPath: string): Promise<{ progresses: any[]; profileName: string } | null> => {
         try {
             const raw = await fs.readFile(confJsonPath, "utf-8");

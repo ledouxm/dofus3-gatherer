@@ -26,6 +26,14 @@ const BG = "rgba(10, 12, 18, 0.92)";
 
 type View = "empty" | "list" | { kind: "viewer"; guide: GuideFile; entry: GuideEntry; initialStep?: number };
 
+function deriveGuidesPath(ganymedePath: string): string {
+    return ganymedePath.replace(/[\\/]$/, "") + "/guides";
+}
+
+function deriveConfPath(ganymedePath: string): string {
+    return ganymedePath.replace(/[\\/]$/, "") + "/conf.json";
+}
+
 export function GuidesPanel() {
     const config = useConfig();
     const mappings = useMappings();
@@ -40,8 +48,10 @@ export function GuidesPanel() {
 
     // Unified progress state — sourced from either conf.json or internal configStore
     const [progresses, setProgresses] = useState<GuideProgress[]>([]);
-    const [confJsonPath, setConfJsonPath] = useState<string | null>(null);
     const [profileName, setProfileName] = useState<string | null>(null);
+
+    // Resolved ganymedePath (may come from config or auto-detection)
+    const [ganymedePath, setGanymedePath] = useState<string | null>(null);
 
     const hasLoaded = useRef(false);
 
@@ -81,83 +91,84 @@ export function GuidesPanel() {
         return Object.values(config?.guides?.progress ?? {});
     }, [config?.guides?.progress]);
 
-    // Auto-load folder and conf.json on mount
+    const loadFromGanymedePath = useCallback(async (ganymPath: string) => {
+        const guidesPath = deriveGuidesPath(ganymPath);
+        const confPath = deriveConfPath(ganymPath);
+
+        const loaded = await window.api.readGuidesFolder(guidesPath).catch(() => []);
+        setEntries(loaded as GuideEntry[]);
+        setView("list");
+        buildQuestIndex(loaded as GuideEntry[]);
+
+        const confData = await window.api.readGuidesConf(confPath).catch(() => null);
+        if (confData) {
+            setProfileName(confData.profileName);
+            setProgresses(confData.progresses as GuideProgress[]);
+        } else {
+            setProfileName(null);
+            setProgresses(internalProgressesToArray());
+        }
+    }, [buildQuestIndex, internalProgressesToArray]);
+
+    // Auto-load on mount
     useEffect(() => {
         if (hasLoaded.current) return;
-        const folderPath = config?.guides?.folderPath;
-        const savedConfPath = config?.guides?.confJsonPath;
-        if (!folderPath) return;
         hasLoaded.current = true;
 
-        setLoading(true);
+        const savedPath = config?.guides?.ganymedePath;
 
-        const loadAll = async () => {
-            // Load guides
-            const loaded = await window.api.readGuidesFolder(folderPath).catch(() => []);
-            setEntries(loaded as GuideEntry[]);
-            setView("list");
-            buildQuestIndex(loaded as GuideEntry[]);
-
-            // Load conf.json if previously selected
-            if (savedConfPath) {
-                const confData = await window.api.readGuidesConf(savedConfPath).catch(() => null);
-                if (confData) {
-                    setConfJsonPath(savedConfPath);
-                    setProfileName(confData.profileName);
-                    setProgresses(confData.progresses as GuideProgress[]);
-                    return;
+        const init = async () => {
+            setLoading(true);
+            try {
+                if (savedPath) {
+                    setGanymedePath(savedPath);
+                    await loadFromGanymedePath(savedPath);
+                } else {
+                    // Try auto-detection
+                    const detected = await window.api.getDefaultGanymedePath().catch(() => null);
+                    if (detected) {
+                        setGanymedePath(detected);
+                        updateConfig.mutate({
+                            guides: {
+                                ...(config?.guides ?? { progress: {} }),
+                                ganymedePath: detected,
+                            },
+                        });
+                        await loadFromGanymedePath(detected);
+                    }
                 }
+            } finally {
+                setLoading(false);
             }
-            // Fall back to internal progress
-            setProgresses(internalProgressesToArray());
         };
 
-        loadAll().finally(() => setLoading(false));
+        init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [config?.guides?.folderPath]);
+    }, []);
 
     // Keep internal progress in sync when no conf.json is loaded
     useEffect(() => {
-        if (confJsonPath) return;
+        if (profileName) return;
         setProgresses(internalProgressesToArray());
-    }, [confJsonPath, internalProgressesToArray]);
+    }, [profileName, internalProgressesToArray]);
 
-    const handlePickFolder = useCallback(async () => {
-        const folderPath = await window.api.pickGuidesFolder();
-        if (!folderPath) return;
+    const handlePickGanymedeFolder = useCallback(async () => {
+        const picked = await window.api.pickGanymedeFolder();
+        if (!picked) return;
         setLoading(true);
         try {
-            const loaded = await window.api.readGuidesFolder(folderPath);
-            setEntries(loaded as GuideEntry[]);
-            setView("list");
-            buildQuestIndex(loaded as GuideEntry[]);
+            setGanymedePath(picked);
             updateConfig.mutate({
                 guides: {
                     ...(config?.guides ?? { progress: {} }),
-                    folderPath,
+                    ganymedePath: picked,
                 },
             });
+            await loadFromGanymedePath(picked);
         } finally {
             setLoading(false);
         }
-    }, [config, updateConfig]);
-
-    const handleLoadConf = useCallback(async () => {
-        const filePath = await window.api.pickGuidesConfFile();
-        if (!filePath) return;
-        const confData = await window.api.readGuidesConf(filePath);
-        if (!confData) return;
-        setConfJsonPath(filePath);
-        setProfileName(confData.profileName);
-        setProgresses(confData.progresses as GuideProgress[]);
-        // Persist the conf.json path
-        updateConfig.mutate({
-            guides: {
-                ...(config?.guides ?? { progress: {} }),
-                confJsonPath: filePath,
-            },
-        });
-    }, [config, updateConfig]);
+    }, [config, updateConfig, loadFromGanymedePath]);
 
     const handleProgressChange = useCallback(
         async (guideId: number, patch: Partial<GuideProgress>) => {
@@ -178,13 +189,13 @@ export function GuidesPanel() {
 
             setProgresses(newProgresses);
 
-            if (confJsonPath) {
-                await window.api.writeGuidesConf(confJsonPath, newProgresses);
+            if (ganymedePath) {
+                await window.api.writeGuidesConf(deriveConfPath(ganymedePath), newProgresses);
             } else {
                 updateConfig.mutate(buildProgressPatch(config!, guideId, patch));
             }
         },
-        [progresses, confJsonPath, config, updateConfig],
+        [progresses, ganymedePath, config, updateConfig],
     );
 
     const handleSelectGuide = useCallback(async (entry: GuideEntry) => {
@@ -222,7 +233,7 @@ export function GuidesPanel() {
                 <VStack gap={4}>
                     <LuFolderOpen size={36} color="rgba(255,255,255,0.15)" />
                     <Text fontSize="sm" color="whiteAlpha.500">
-                        Sélectionnez un dossier de guides
+                        Sélectionnez le dossier Ganymede
                     </Text>
                     <HStack gap={3}>
                         <Box
@@ -239,10 +250,10 @@ export function GuidesPanel() {
                             fontSize="sm"
                             cursor="pointer"
                             _hover={{ bg: "rgba(255,255,255,0.06)", color: "white" }}
-                            onClick={handlePickFolder}
+                            onClick={handlePickGanymedeFolder}
                         >
                             <LuFolderOpen size={14} />
-                            Ouvrir un dossier
+                            Ouvrir le dossier Ganymede
                         </Box>
                     </HStack>
                 </VStack>
@@ -256,14 +267,12 @@ export function GuidesPanel() {
                 entries={entries}
                 progresses={progresses}
                 profileName={profileName}
-                folderPath={config?.guides?.folderPath ?? null}
+                folderPath={ganymedePath}
                 onSelectGuide={handleSelectGuide}
-                onChangeFolder={handlePickFolder}
-                onLoadConf={handleLoadConf}
+                onChangeFolder={handlePickGanymedeFolder}
                 onEntriesChange={async () => {
-                    const folderPath = config?.guides?.folderPath;
-                    if (!folderPath) return;
-                    const loaded = await window.api.readGuidesFolder(folderPath).catch(() => []);
+                    if (!ganymedePath) return;
+                    const loaded = await window.api.readGuidesFolder(deriveGuidesPath(ganymedePath)).catch(() => []);
                     setEntries(loaded as GuideEntry[]);
                 }}
             />
