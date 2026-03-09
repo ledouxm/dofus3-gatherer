@@ -12,7 +12,27 @@ export type Recording = {
     videoBuffer: ArrayBuffer | null;
 };
 
+export type RecordingMeta = {
+    filename: string;
+    metadata: { name: string; createdAt: string; durationMs: number };
+    isFavorite?: boolean;
+};
+
 export type RecorderStatus = "idle" | "recording" | "processing" | "done";
+
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 8192) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    }
+    return btoa(binary);
+}
+
+export const formatDurationMs = (ms: number): string => {
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+};
 
 /**
  * Manages packet + screen recording for the Packet Viewer.
@@ -71,7 +91,7 @@ export const usePacketRecorder = () => {
         [packetHandler],
     );
 
-    const stop = useCallback(async (): Promise<Recording> => {
+    const stop = useCallback(async (): Promise<Recording & { savedFilename: string }> => {
         setStatus("processing");
 
         if (tickRef.current) {
@@ -86,28 +106,22 @@ export const usePacketRecorder = () => {
             const recorder = mediaRecorderRef.current;
             const packets = [...packetsRef.current];
             if (!recorder || recorder.state === "inactive") {
-                const recording: Recording = {
-                    startTime: startTimeRef.current,
-                    packets,
-                    videoBuffer: null,
-                };
-                window.api.saveRecording({ packets: recording.packets, videoBuffer: null });
-                setStatus("done");
-                resolve(recording);
+                const recording: Recording = { startTime: 0, packets, videoBuffer: null };
+                window.api.saveRecordingToDisk({ packets: recording.packets, videoBase64: null }).then((savedFilename) => {
+                    setStatus("done");
+                    resolve({ ...recording, savedFilename });
+                });
                 return;
             }
 
             recorder.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: "video/webm" });
                 const videoBuffer = await blob.arrayBuffer();
-                const recording: Recording = {
-                    startTime: startTimeRef.current,
-                    packets,
-                    videoBuffer,
-                };
-                await window.api.saveRecording({ packets: recording.packets, videoBuffer });
+                const videoBase64 = arrayBufferToBase64(videoBuffer);
+                const recording: Recording = { startTime: 0, packets, videoBuffer };
+                const savedFilename = await window.api.saveRecordingToDisk({ packets, videoBase64 });
                 setStatus("done");
-                resolve(recording);
+                resolve({ ...recording, savedFilename });
             };
 
             recorder.stop();

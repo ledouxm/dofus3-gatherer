@@ -5,95 +5,35 @@ import {
     Flex,
     Heading,
     IconButton,
-    Stack,
-    Text,
 } from "@chakra-ui/react";
-import { useCallback, useEffect, useState } from "react";
-import { LuCheck, LuCircle, LuCopy, LuDownload, LuSquare, LuUpload, LuVideo } from "react-icons/lu";
+import { useCallback, useState } from "react";
+import { LuCheck, LuCopy, LuDownload, LuUpload, LuVideo } from "react-icons/lu";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { PacketTimeline, typeColor } from "./PacketTimeline";
-import {
-    type PacketEntry,
-    type Recording,
-    formatDuration,
-    formatMs,
-    usePacketRecorder,
-} from "./usePacketRecorder";
+import { type PacketEntry, type Recording, formatMs } from "./usePacketRecorder";
 import { VideoPlayer } from "./VideoPlayer";
-
-type Source = Electron.DesktopCapturerSource;
+import { RecordingLibrary } from "./RecordingLibrary";
 
 /**
- * Packet Viewer window (loaded at hash #/viewer).
+ * Packet Viewer tab.
  *
- * Workflow:
- * 1. Pick a screen/window source from the dropdown.
- * 2. Click Record — captures screen + all decoded server packets.
- * 3. Click Stop — video + packets saved to main process.
- * 4. Replay: scrub the video, packet timeline highlights in sync.
- * 5. Click a packet row to inspect its JSON and copy the type name
- *    back into the Config modal.
+ * Layout:
+ * - Left sidebar: RecordingLibrary (record controls + saved recordings list)
+ * - Center: Video player
+ * - Right: Packet timeline + JSON detail
  */
 export const ViewerApp = () => {
-    const [sources, setSources] = useState<Source[]>([]);
-    const [selectedSourceId, setSelectedSourceId] = useState<string>("");
-    const [stream, setStream] = useState<MediaStream | null>(null);
     const [recording, setRecording] = useState<Recording | null>(null);
+    const [activeFilename, setActiveFilename] = useState<string | null>(null);
     const [currentMs, setCurrentMs] = useState(0);
     const [selectedPacket, setSelectedPacket] = useState<PacketEntry | null>(null);
 
-    const { status, duration, start, stop, reset } = usePacketRecorder();
-
-    // Load desktop sources on mount
-    useEffect(() => {
-        window.api.getDesktopSources().then((srcs) => {
-            setSources(srcs);
-            if (srcs.length > 0) setSelectedSourceId(srcs[0].id);
-        });
-    }, []);
-
-    // Load existing recording from main process on mount (if user re-opens the window)
-    useEffect(() => {
-        window.api.getRecording().then((saved) => {
-            if (saved && saved.packets.length > 0) {
-                setRecording({
-                    startTime: 0,
-                    packets: saved.packets as PacketEntry[],
-                    videoBuffer: saved.videoBuffer,
-                });
-            }
-        });
-    }, []);
-
-    const handleRecord = useCallback(async () => {
-        if (!selectedSourceId) return;
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-                // @ts-expect-error — Electron-specific constraint
-                mandatory: {
-                    chromeMediaSource: "desktop",
-                    chromeMediaSourceId: selectedSourceId,
-                    maxWidth: 1920,
-                    maxHeight: 1080,
-                },
-            },
-        });
-        setStream(mediaStream);
-        setRecording(null);
+    const handleLoad = useCallback((rec: Recording & { filename: string }) => {
+        setRecording(rec);
+        setActiveFilename(rec.filename);
         setSelectedPacket(null);
-        reset();
-        await start(mediaStream);
-    }, [selectedSourceId, start, reset]);
-
-    const handleStop = useCallback(async () => {
-        const result = await stop();
-        setRecording(result);
-        if (stream) {
-            stream.getTracks().forEach((t) => t.stop());
-            setStream(null);
-        }
-    }, [stop, stream]);
+        setCurrentMs(0);
+    }, []);
 
     const handleSave = useCallback(async () => {
         if (!recording) return;
@@ -109,18 +49,16 @@ export const ViewerApp = () => {
         await window.api.exportRecording({ packets: recording.packets, videoBase64 });
     }, [recording]);
 
-    const handleLoad = useCallback(async () => {
+    const handleImport = useCallback(async () => {
         const data = await window.api.importRecording();
         if (!data) return;
         const videoBuffer = data.videoBase64
             ? Uint8Array.from(atob(data.videoBase64), (c) => c.charCodeAt(0)).buffer
             : null;
         setRecording({ startTime: 0, packets: data.packets as PacketEntry[], videoBuffer });
+        setActiveFilename(null);
         setSelectedPacket(null);
     }, []);
-
-    const isRecording = status === "recording";
-    const isProcessing = status === "processing";
 
     return (
         <Flex direction="column" h="100vh" bg="gray.950" color="white" overflow="hidden">
@@ -142,134 +80,61 @@ export const ViewerApp = () => {
                     </Heading>
                 </Flex>
 
-                {/* Source selector */}
-                <Box
-                    flex={1}
-                    maxW="260px"
-                >
-                    <select
-                        value={selectedSourceId}
-                        onChange={(e) => setSelectedSourceId(e.target.value)}
-                        disabled={isRecording}
-                        style={{
-                            width: "100%",
-                            background: "rgba(255,255,255,0.05)",
-                            color: "white",
-                            border: "1px solid rgba(255,255,255,0.15)",
-                            borderRadius: "6px",
-                            padding: "4px 8px",
-                            fontSize: "12px",
-                            outline: "none",
-                        }}
-                    >
-                        {sources.map((s) => (
-                            <option key={s.id} value={s.id} style={{ background: "#1a1a2e" }}>
-                                {s.name}
-                            </option>
-                        ))}
-                    </select>
-                </Box>
-
-                {/* Record / Stop controls */}
-                <Flex
-                    align="center"
-                    gap={2}
-                >
-                    {!isRecording ? (
-                        <Button
-                            size="xs"
-                            colorScheme="red"
-                            variant="solid"
-                            onClick={handleRecord}
-                            disabled={!selectedSourceId || isProcessing}
-                            gap={1}
-                        >
-                            <LuCircle size={10} />
-                            Record
-                        </Button>
-                    ) : (
-                        <Button size="xs" colorScheme="gray" variant="solid" onClick={handleStop} gap={1}>
-                            <LuSquare size={10} />
-                            Stop
-                        </Button>
-                    )}
-
-                    {isRecording && (
-                        <Flex align="center" gap={1}>
-                            <Box w="6px" h="6px" borderRadius="full" bg="red.400" animation="pulse 1s infinite" />
-                            <Text fontSize="xs" fontFamily="mono" color="red.300">
-                                {formatDuration(duration)}
-                            </Text>
-                        </Flex>
-                    )}
-                    {isProcessing && (
-                        <Text fontSize="xs" color="whiteAlpha.500">
-                            Processing...
-                        </Text>
-                    )}
-                </Flex>
-
-                {/* Packet count badge */}
                 {recording && (
                     <Badge colorScheme="blue" fontSize="10px" css={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
                         {recording.packets.length} packets
                     </Badge>
                 )}
 
-                {/* Save / Load */}
-                <Flex
-                    align="center"
-                    gap={2}
-                >
+                <Box flex={1} />
+
+                {/* Export / Import */}
+                <Flex align="center" gap={2}>
                     <Button
                         size="xs"
                         variant="outline"
                         onClick={handleSave}
-                        disabled={!recording || isRecording || isProcessing}
+                        disabled={!recording}
                         gap={1}
                     >
                         <LuDownload size={10} />
-                        Save
+                        Export
                     </Button>
                     <Button
                         size="xs"
                         variant="outline"
-                        onClick={handleLoad}
-                        disabled={isRecording || isProcessing}
+                        onClick={handleImport}
                         gap={1}
                     >
                         <LuUpload size={10} />
-                        Load
+                        Import
                     </Button>
                 </Flex>
-
-                <Box flex={1} />
             </Flex>
 
             {/* Main content: resizable panels */}
             <Group style={{ flex: 1, overflow: "hidden", minHeight: 0 }}>
+                {/* Library sidebar */}
+                <Panel defaultSize={20} minSize={14} style={{ display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+                    <RecordingLibrary onLoad={handleLoad} activeFilename={activeFilename} />
+                </Panel>
+
+                <Separator style={{ width: "4px", cursor: "col-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+
                 {/* Video panel */}
-                <Panel defaultSize={55} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+                <Panel defaultSize={42} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
                     <Flex direction="column" p={3} gap={3} h="100%" overflow="hidden">
                         <VideoPlayer
                             videoBuffer={recording?.videoBuffer ?? null}
                             onTimeUpdate={setCurrentMs}
                         />
-                        {!recording && !isRecording && (
-                            <Stack gap={1} align="center" mt={2}>
-                                <Text fontSize="xs" color="whiteAlpha.400" textAlign="center">
-                                    Select a source above and click Record, then trigger a map change in Dofus.
-                                    Stop recording to replay the session here.
-                                </Text>
-                            </Stack>
-                        )}
                     </Flex>
                 </Panel>
 
                 <Separator style={{ width: "4px", cursor: "col-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
 
                 {/* Right side: packet list + JSON detail */}
-                <Panel defaultSize={45} minSize={20} style={{ display: "flex", overflow: "hidden" }}>
+                <Panel defaultSize={38} minSize={20} style={{ display: "flex", overflow: "hidden" }}>
                     <Group orientation="vertical" style={{ flex: 1, overflow: "hidden" }}>
                         {/* Packet timeline */}
                         <Panel defaultSize={60} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -302,7 +167,7 @@ const JsonDetail = ({ packet }: { packet: PacketEntry | null }) => {
     if (!packet) {
         return (
             <Flex h="100%" align="center" justify="center">
-                <Text fontSize="xs" color="whiteAlpha.400">Select a packet to inspect its JSON</Text>
+                <Box fontSize="xs" color="whiteAlpha.400">Select a packet to inspect its JSON</Box>
             </Flex>
         );
     }
@@ -331,9 +196,9 @@ const JsonDetail = ({ packet }: { packet: PacketEntry | null }) => {
                 <Badge colorScheme={typeColor(packet.typeName)} fontFamily="mono" fontSize="10px" px={1}>
                     {packet.typeName}
                 </Badge>
-                <Text fontSize="10px" color="whiteAlpha.400" fontFamily="mono">
+                <Box fontSize="10px" color="whiteAlpha.400" fontFamily="mono">
                     @ {formatMs(packet.relativeMs)}
-                </Text>
+                </Box>
                 <Box flex={1} />
                 <IconButton
                     aria-label="Copy JSON"

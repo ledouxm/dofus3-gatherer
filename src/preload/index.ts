@@ -79,6 +79,17 @@ const api = {
         ipcRenderer.invoke("save-recording", data),
     getRecording: (): Promise<{ packets: unknown[]; videoBuffer: ArrayBuffer | null } | null> =>
         ipcRenderer.invoke("get-recording"),
+    // Disk-based recording APIs
+    saveRecordingToDisk: (data: { packets: unknown[]; videoBase64: string | null; name?: string }): Promise<string> =>
+        ipcRenderer.invoke("save-recording-to-disk", data),
+    listRecordings: (): Promise<{ filename: string; metadata: { name: string; createdAt: string; durationMs: number } }[]> =>
+        ipcRenderer.invoke("list-recordings"),
+    loadRecordingFromDisk: (filename: string): Promise<{ packets: unknown[]; videoBase64: string | null; metadata: { name: string; createdAt: string; durationMs: number } } | null> =>
+        ipcRenderer.invoke("load-recording-from-disk", filename),
+    deleteRecording: (filename: string): Promise<boolean> =>
+        ipcRenderer.invoke("delete-recording", filename),
+    updateRecordingMetadata: (filename: string, updates: { name?: string }): Promise<boolean> =>
+        ipcRenderer.invoke("update-recording-metadata", filename, updates),
     getDesktopSources: (): Promise<Electron.DesktopCapturerSource[]> =>
         ipcRenderer.invoke("get-desktop-sources"),
     getOpenWindows: (): Promise<{ handle: number; title: string }[]> =>

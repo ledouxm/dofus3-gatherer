@@ -150,7 +150,21 @@ app.whenReady().then(async () => {
 
     const configDir = path.join(process.env.USER_DATA_PATH!, "config");
     const cacheDir = path.join(process.env.USER_DATA_PATH!, "cache");
+    const recordingsDir = path.join(process.env.USER_DATA_PATH!, "recordings");
     await fs.mkdir(cacheDir, { recursive: true }).catch(() => {});
+    await fs.mkdir(recordingsDir, { recursive: true }).catch(() => {});
+
+    function resolveRecordingPath(filename: string): string {
+        if (
+            !filename.endsWith(".dfrec") ||
+            filename.includes("/") ||
+            filename.includes("\\") ||
+            filename.includes("..")
+        ) {
+            throw new Error(`Invalid recording filename: "${filename}"`);
+        }
+        return path.join(recordingsDir, filename);
+    }
 
     // Ensure config.json exists on first run
     const existingConfig = await readMainConfig(configDir);
@@ -212,12 +226,79 @@ app.whenReady().then(async () => {
         return data;
     });
 
-    // In-memory recording storage shared between windows
+    // In-memory recording storage shared between windows (kept for legacy compat)
     let currentRecording: { packets: unknown[]; videoBuffer: ArrayBuffer | null } | null = null;
     ipcMain.handle("save-recording", (_event, data) => {
         currentRecording = data;
     });
     ipcMain.handle("get-recording", () => currentRecording);
+
+    // Disk-based recording storage
+    ipcMain.handle(
+        "save-recording-to-disk",
+        async (_event, data: { packets: { relativeMs: number }[]; videoBase64: string | null; name?: string }) => {
+            const filename = `recording-${Date.now()}.dfrec`;
+            const filePath = path.join(recordingsDir, filename);
+            const durationMs = data.packets.length > 0 ? Math.max(0, ...data.packets.map((p) => p.relativeMs)) : 0;
+            const record = {
+                packets: data.packets,
+                videoBase64: data.videoBase64,
+                metadata: {
+                    name: data.name ?? `Recording ${new Date().toLocaleString()}`,
+                    createdAt: new Date().toISOString(),
+                    durationMs,
+                },
+            };
+            await fs.writeFile(filePath, JSON.stringify(record), "utf-8");
+            return filename;
+        },
+    );
+
+    ipcMain.handle("list-recordings", async () => {
+        try {
+            const files = await fs.readdir(recordingsDir);
+            const results: { filename: string; metadata: { name: string; createdAt: string; durationMs: number } }[] = [];
+            for (const file of files) {
+                if (!file.endsWith(".dfrec")) continue;
+                try {
+                    const raw = await fs.readFile(path.join(recordingsDir, file), "utf-8");
+                    const parsed = JSON.parse(raw);
+                    if (parsed?.metadata) {
+                        results.push({ filename: file, metadata: parsed.metadata });
+                    }
+                } catch {}
+            }
+            results.sort((a, b) => new Date(b.metadata.createdAt).getTime() - new Date(a.metadata.createdAt).getTime());
+            return results;
+        } catch {
+            return [];
+        }
+    });
+
+    ipcMain.handle("load-recording-from-disk", async (_event, filename: string) => {
+        const filePath = resolveRecordingPath(filename);
+        try {
+            const raw = await fs.readFile(filePath, "utf-8");
+            return JSON.parse(raw);
+        } catch {
+            return null;
+        }
+    });
+
+    ipcMain.handle("delete-recording", async (_event, filename: string) => {
+        const filePath = resolveRecordingPath(filename);
+        await fs.unlink(filePath);
+        return true;
+    });
+
+    ipcMain.handle("update-recording-metadata", async (_event, filename: string, updates: { name?: string }) => {
+        const filePath = resolveRecordingPath(filename);
+        const raw = await fs.readFile(filePath, "utf-8");
+        const parsed = JSON.parse(raw);
+        parsed.metadata = { ...parsed.metadata, ...updates };
+        await fs.writeFile(filePath, JSON.stringify(parsed), "utf-8");
+        return true;
+    });
 
     ipcMain.handle(
         "export-recording",

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { LuCheck, LuCopy } from "react-icons/lu";
 import type { PacketEntry } from "./usePacketRecorder";
 import { formatMs } from "./usePacketRecorder";
+import { MapToConfigButton } from "./MapToConfigButton";
 
 interface PacketTimelineProps {
     packets: PacketEntry[];
@@ -174,6 +175,7 @@ const PacketDetail = ({ packet }: { packet: PacketEntry }) => {
                 </Text>
                 <Box flex={1} />
                 <CopyButton value={packet.typeName} />
+                <MapToConfigButton value={packet.typeName} />
             </Flex>
 
             {/* Field rows */}
@@ -203,6 +205,7 @@ const PacketDetail = ({ packet }: { packet: PacketEntry }) => {
                         {JSON.stringify(value)}
                     </Text>
                     <CopyButton value={key} />
+                    <MapToConfigButton value={String(JSON.stringify(value))} />
                 </Flex>
             ))}
         </Box>
