@@ -19,7 +19,7 @@ export const Toaster = () => {
     <Portal>
       <ChakraToaster toaster={toaster} insetInline={{ mdDown: "4" }}>
         {(toast) => (
-          <Toast.Root width={{ md: "sm" }} bg="gray.900" border="1px solid" borderColor="whiteAlpha.200" onMouseEnter={() => toaster.dismiss(toast.id)}>
+          <Toast.Root width={{ md: "sm" }} bg="gray.900" border="1px solid" borderColor="whiteAlpha.200" onMouseEnter={toast.meta?.dismissOnHover ? () => toaster.dismiss(toast.id) : undefined}>
             {toast.type === "loading" ? (
               <Spinner size="sm" color="blue.solid" />
             ) : (

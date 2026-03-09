@@ -184,6 +184,13 @@ app.whenReady().then(async () => {
             if (input.type === "keyDown" && (input.control || input.meta) && input.key === "r") {
                 window.reload();
             }
+            if (input.type === "keyDown" && input.key === "F12") {
+                if (window.webContents.isDevToolsOpened()) {
+                    window.webContents.closeDevTools();
+                } else {
+                    window.webContents.openDevTools();
+                }
+            }
         });
     });
 

@@ -57,7 +57,7 @@ interface Props {
     entry: GuideEntry;
     progress: GuideProgress;
     onProgressChange: (patch: Partial<GuideProgress>) => void;
-    onBack: () => void;
+    onBack?: () => void;
     initialStep?: number;
     onNavigateToGuide?: (guideId: number, stepIndex: number) => void;
 }
@@ -113,16 +113,18 @@ export function GuideViewer({ guide, entry, progress, onProgressChange, onBack, 
         <Box w="100%" h="100%" bg={BG} display="flex" flexDirection="column" overflow="hidden">
             {/* Header */}
             <HStack px={2} py={1} borderBottom={BORDER} flexShrink={0} gap={1}>
-                <IconButton
-                    aria-label="Retour"
-                    size="xs"
-                    variant="ghost"
-                    color="whiteAlpha.600"
-                    _hover={{ color: "white" }}
-                    onClick={onBack}
-                >
-                    <LuChevronLeft />
-                </IconButton>
+                {onBack && (
+                    <IconButton
+                        aria-label="Retour"
+                        size="xs"
+                        variant="ghost"
+                        color="whiteAlpha.600"
+                        _hover={{ color: "white" }}
+                        onClick={onBack}
+                    >
+                        <LuChevronLeft />
+                    </IconButton>
+                )}
                 <Text fontSize="sm" color="whiteAlpha.800" fontWeight="600" flex={1} truncate>
                     {guide.name}
                 </Text>

@@ -72,6 +72,14 @@ export function CoordDisplay({ meta }: { meta: WorldmapMeta }) {
         return () => { map.getContainer().style.cursor = ""; };
     }, [travelMode, map]);
 
+    useEffect(() => {
+        if (travelMode) {
+            map.doubleClickZoom.disable();
+        } else {
+            map.doubleClickZoom.enable();
+        }
+    }, [travelMode, map]);
+
     useMapEvents({
         mousemove(e) {
             setCoord(worldToDofus({ x: e.latlng.lng, y: -e.latlng.lat }, meta));

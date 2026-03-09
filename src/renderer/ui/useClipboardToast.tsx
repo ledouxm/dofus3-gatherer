@@ -14,6 +14,7 @@ export function useClipboardToast() {
                 title: label ? <><b>{label}</b> copié</> : "Copié !",
                 type: "success",
                 duration: 2000,
+                meta: { dismissOnHover: true },
             });
         });
     };

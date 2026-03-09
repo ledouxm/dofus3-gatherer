@@ -59,6 +59,8 @@ export type ConfigStore = {
     guides?: {
         ganymedePath?: string;
         progress: { [guideId: string]: GuideProgress };
+        openedTabIds?: number[];
+        activeTabId?: number | null;
     };
 };
 
