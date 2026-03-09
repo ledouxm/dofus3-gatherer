@@ -1,8 +1,8 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Text } from "@chakra-ui/react";
 import parse, { type DOMNode, domToReact } from "html-react-parser";
 import type { Element } from "html-react-parser";
 import { useMemo } from "react";
-import { LuBookOpen } from "react-icons/lu";
+import { LuBookOpen, LuCheck } from "react-icons/lu";
 import { mapStore } from "../../providers/store";
 import { useClipboardToast } from "../useClipboardToast";
 
@@ -91,9 +91,10 @@ interface Props {
     checkedBoxes: number[];
     onCheckboxToggle: (index: number) => void;
     onNavigateToGuide?: (guideId: number, stepIndex: number) => void;
+    knownQuestIds?: Set<number>;
 }
 
-export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavigateToGuide }: Props) {
+export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavigateToGuide, knownQuestIds }: Props) {
     const copy = useClipboardToast();
 
     const options = useMemo(() => {
@@ -217,6 +218,9 @@ export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavig
                 // data-type="quest-block" — colored block
                 if (el.attribs?.["data-type"] === "quest-block") {
                     const status = el.attribs?.["status"] ?? "";
+                    const questName = el.attribs?.["questname"] ?? "";
+                    const questId = parseInt(el.attribs?.["questid"] ?? "0", 10);
+                    const isKnown = questId > 0 && knownQuestIds?.has(questId);
                     const borderColor =
                         status === "start"
                             ? "rgba(239,68,68,0.6)"
@@ -235,13 +239,21 @@ export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavig
                             borderLeft={`3px solid ${borderColor}`}
                         >
                             {domToReact(el.children as DOMNode[], opts)}
+                            {questName && (
+                                <Box display="inline-flex" alignItems="center" gap="4px" mt={1}>
+                                    {isKnown && <LuCheck size={11} color="rgba(255,255,255,0.35)" />}
+                                    <Text fontSize="xs" color="whiteAlpha.500" fontStyle="italic">
+                                        {questName}
+                                    </Text>
+                                </Box>
+                            )}
                         </Box>
                     );
                 }
             },
         };
         return opts;
-    }, [checkedBoxes, onCheckboxToggle, copy, onNavigateToGuide]);
+    }, [checkedBoxes, onCheckboxToggle, copy, onNavigateToGuide, knownQuestIds]);
 
     return (
         <Box

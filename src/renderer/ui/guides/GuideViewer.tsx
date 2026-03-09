@@ -1,10 +1,21 @@
 import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
-import { useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo, useState } from "react";
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
+import { db } from "../../db";
 import { mapStore } from "../../providers/store";
 import { useClipboardToast } from "../useClipboardToast";
 import { GuideHtmlContent } from "./GuideHtmlContent";
 import type { GuideEntry, GuideFile, GuideProgress } from "./types";
+
+const QUEST_ID_RE = /questid="(\d+)"/g;
+function extractQuestIds(html: string): number[] {
+    const ids: number[] = [];
+    let m: RegExpExecArray | null;
+    QUEST_ID_RE.lastIndex = 0;
+    while ((m = QUEST_ID_RE.exec(html)) !== null) ids.push(parseInt(m[1], 10));
+    return ids;
+}
 
 const BORDER = "1px solid rgba(255,255,255,0.08)";
 const BG = "rgba(10, 12, 18, 0.92)";
@@ -59,6 +70,17 @@ export function GuideViewer({ guide, entry, progress, onProgressChange, onBack, 
     const isFirst = currentStep === 0;
     const isLast = currentStep === guide.steps.length - 1;
     const checkedBoxes = progress.steps[String(currentStep)]?.checkboxes ?? [];
+
+    const stepQuestIds = useMemo(() => (step ? extractQuestIds(step.web_text) : []), [step]);
+    const { data: knownQuestIds } = useQuery({
+        queryKey: ["quest-exists", stepQuestIds],
+        queryFn: async () => {
+            const rows = await db.selectFrom("QuestData").select("id").where("id", "in", stepQuestIds).execute();
+            return new Set(rows.map((r) => r.id));
+        },
+        enabled: stepQuestIds.length > 0,
+        staleTime: Infinity,
+    });
 
     const goToStep = useCallback(
         (idx: number) => {
@@ -168,6 +190,7 @@ export function GuideViewer({ guide, entry, progress, onProgressChange, onBack, 
                         checkedBoxes={checkedBoxes}
                         onCheckboxToggle={handleCheckboxToggle}
                         onNavigateToGuide={onNavigateToGuide}
+                        knownQuestIds={knownQuestIds}
                     />
                 )}
             </Box>
