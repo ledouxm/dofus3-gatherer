@@ -7,7 +7,8 @@
       "Bash(sqlite3 dofus.sqlite \"SELECT * FROM QuestData LIMIT 5;\")",
       "Bash(sqlite3 dofus.sqlite \"SELECT q.id, CAST\\(q.nameId AS TEXT\\), q.levelMin, q.levelMax, q.isDungeonQuest FROM QuestData q LIMIT 10;\")",
       "Bash(sqlite3 dofus.sqlite \"SELECT sql FROM sqlite_master WHERE type=''table'' AND name IN \\(''DungeonData'', ''SubAreaData'', ''AreaData'', ''SuperAreaData''\\);\")",
-      "Bash(sqlite3 dofus.sqlite \"SELECT t.id, t.value, t.lang FROM translations WHERE t.id IN \\(''752265'', ''220621'', ''220628'', ''232658'', ''802290''\\) AND t.lang=''fr'';\")"
+      "Bash(sqlite3 dofus.sqlite \"SELECT t.id, t.value, t.lang FROM translations WHERE t.id IN \\(''752265'', ''220621'', ''220628'', ''232658'', ''802290''\\) AND t.lang=''fr'';\")",
+      "Bash(npx @chakra-ui/cli snippet add slider)"
     ]
   }
 }

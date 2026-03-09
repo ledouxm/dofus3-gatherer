@@ -16,6 +16,7 @@ interface HintPoint {
     nameId: number;
     categoryId: number;
     gfx: number;
+    subareaNameId: number | null;
 }
 
 
@@ -35,8 +36,9 @@ export const HintsLayer = ({ meta }: Props) => {
         queryFn: () =>
             db
                 .selectFrom("HintData")
+                .leftJoin("SubAreaData", "SubAreaData.id", "HintData.subareaId")
                 .where("HintData.worldMapId", "=", Number(selectedWorldmapId))
-                .select(["HintData.id", "HintData.x", "HintData.y", "HintData.nameId", "HintData.categoryId", "HintData.gfx"])
+                .select(["HintData.id", "HintData.x", "HintData.y", "HintData.nameId", "HintData.categoryId", "HintData.gfx", "SubAreaData.nameId as subareaNameId"])
                 .execute() as Promise<HintPoint[]>,
         enabled: selectedWorldmapId !== null,
     });
@@ -143,8 +145,11 @@ export const HintsLayer = ({ meta }: Props) => {
                 const { x, y } = dofusToWorld({ posX: best.hint.x, posY: best.hint.y }, meta);
                 const pt = map.latLngToContainerPoint([-(y + cellH / 2), x + cellW / 2]);
                 const rect = map.getContainer().getBoundingClientRect();
+                const hintName = getTranslation(best.hint.nameId);
+                const subareaName = best.hint.subareaNameId ? getTranslation(best.hint.subareaNameId) : null;
+                const name = hintName === "Zaap" && subareaName ? `Zaap - ${subareaName}` : hintName;
                 setTooltip({
-                    name: getTranslation(best.hint.nameId),
+                    name,
                     x: rect.left + pt.x,
                     y: rect.top + pt.y,
                 });

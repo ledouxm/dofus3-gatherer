@@ -1,6 +1,6 @@
-import { Box, HStack, IconButton, Text } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Slider, Text } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
 import { db } from "../../db";
 import { mapStore } from "../../providers/store";
@@ -71,6 +71,11 @@ export function GuideViewer({ guide, entry, progress, onProgressChange, onBack, 
     const isLast = currentStep === guide.steps.length - 1;
     const checkedBoxes = progress.steps[String(currentStep)]?.checkboxes ?? [];
 
+    const scrollRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        scrollRef.current?.scrollTo({ top: 0 });
+    }, [currentStep]);
+
     const stepQuestIds = useMemo(() => (step ? extractQuestIds(step.web_text) : []), [step]);
     const { data: knownQuestIds } = useQuery({
         queryKey: ["quest-exists", stepQuestIds],
@@ -121,36 +126,38 @@ export function GuideViewer({ guide, entry, progress, onProgressChange, onBack, 
                 <Text fontSize="sm" color="whiteAlpha.800" fontWeight="600" flex={1} truncate>
                     {guide.name}
                 </Text>
-                <Text fontSize="10px" color="whiteAlpha.500" flexShrink={0}>
+                <Text fontSize="sm" color="whiteAlpha.700" flexShrink={0} fontWeight="600">
                     {currentStep + 1}/{guide.steps.length}
                 </Text>
             </HStack>
 
-            {/* Step progress bar */}
-            <HStack px={3} py={2} gap="2px" flexShrink={0} borderBottom={BORDER} flexWrap="wrap">
-                {guide.steps.map((s, idx) => (
-                    <Box
-                        key={idx}
-                        as="button"
-                        h="4px"
-                        flex={1}
-                        minW="6px"
-                        maxW="48px"
-                        borderRadius="full"
-                        bg={
-                            idx < currentStep
-                                ? "#d4f000"
-                                : idx === currentStep
-                                  ? "rgba(212,240,0,0.45)"
-                                  : "rgba(255,255,255,0.1)"
-                        }
-                        cursor="pointer"
-                        onClick={() => goToStep(idx)}
-                        title={s.name ?? `Étape ${idx + 1}`}
-                        _hover={{ opacity: 0.75 }}
-                    />
-                ))}
-            </HStack>
+            {/* Step slider */}
+            <Box px={3} py={2} flexShrink={0} borderBottom={BORDER}>
+                <Slider.Root
+                    min={0}
+                    max={guide.steps.length - 1}
+                    value={[currentStep]}
+                    onValueChange={({ value }) => setCurrentStep(value[0])}
+                    onValueChangeEnd={({ value }) => onProgressChange({ currentStep: value[0] })}
+                    step={1}
+                >
+                    <Slider.Control>
+                        <Slider.Track bg="rgba(255,255,255,0.1)" h="3px">
+                            <Slider.Range bg="#d4f000" />
+                        </Slider.Track>
+                        <Slider.Thumb
+                            index={0}
+                            boxSize="12px"
+                            bg="#d4f000"
+                            borderWidth={0}
+                            shadow="none"
+                            title={step?.name ?? `Étape ${currentStep + 1}`}
+                        >
+                            <Slider.HiddenInput />
+                        </Slider.Thumb>
+                    </Slider.Control>
+                </Slider.Root>
+            </Box>
 
             {/* Step header */}
             <Box px={4} pt={3} pb={1} flexShrink={0}>
@@ -171,6 +178,7 @@ export function GuideViewer({ guide, entry, progress, onProgressChange, onBack, 
 
             {/* Scrollable content */}
             <Box
+                ref={scrollRef}
                 flex={1}
                 overflow="auto"
                 px={4}
