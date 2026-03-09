@@ -10,7 +10,10 @@ import { db } from "../db";
 import { HoverCellLayer } from "./HoverCellLayer";
 
 const aggregateByPosition = (recoltables: Recoltable[], resId: number, multiPos: Set<string>) => {
-    const posMap = new Map<string, { posX: number; posY: number; count: number; hasMore: boolean }>();
+    const posMap = new Map<
+        string,
+        { posX: number; posY: number; count: number; hasMore: boolean }
+    >();
     for (const r of recoltables) {
         const key = `${r.pos.posX},${r.pos.posY}`;
         const qty = r.quantities.find((q) => q.item === resId)?.quantity ?? 1;
@@ -18,7 +21,12 @@ const aggregateByPosition = (recoltables: Recoltable[], resId: number, multiPos:
         if (existing) {
             existing.count += qty;
         } else {
-            posMap.set(key, { posX: r.pos.posX, posY: r.pos.posY, count: qty, hasMore: multiPos.has(key) });
+            posMap.set(key, {
+                posX: r.pos.posX,
+                posY: r.pos.posY,
+                count: qty,
+                hasMore: multiPos.has(key),
+            });
         }
     }
     return Array.from(posMap.values());
@@ -33,7 +41,6 @@ export const RecoltablesLayer = ({ meta }: Props) => {
     const selectedWorldmapId = useStoreValue(mapStore, (s) => s.selectedWorldmapId);
 
     const iconsQueries = useQueries({
-
         queries: selectedResourceIds.map((resId) => ({
             queryKey: ["itemIcon", resId],
             queryFn: async () => {
@@ -57,9 +64,13 @@ export const RecoltablesLayer = ({ meta }: Props) => {
     const recoltables = queries
         .flatMap((q) => q.data ?? [])
         .filter((recoltable) => {
-            if (!recoltable.pos) return false;
+            if (!recoltable?.pos) return false;
             if (seen.has(recoltable._id)) return false;
-            if (selectedWorldmapId !== null && recoltable.pos.worldMap !== Number(selectedWorldmapId)) return false;
+            if (
+                selectedWorldmapId !== null &&
+                recoltable.pos.worldMap !== Number(selectedWorldmapId)
+            )
+                return false;
             seen.add(recoltable._id);
             return recoltable.resources.some((res) => selectedResourceIds.includes(res));
         });
@@ -110,7 +121,8 @@ export const RecoltablesLayer = ({ meta }: Props) => {
                         iconsQueries.find((q) => q.data?.id === Number(resId))?.data?.iconId ?? 0,
                     ),
                     coords: aggregateByPosition(recoltables, Number(resId), multiResourcePositions),
-                    spriteSize: (zoom) => Math.max(6, meta.mapWidth * Math.pow(2, zoom - meta.z_max) * 1.2),
+                    spriteSize: (zoom) =>
+                        Math.max(6, meta.mapWidth * Math.pow(2, zoom - meta.z_max) * 1.2),
                 }))}
             />
             <HoverCellLayer
