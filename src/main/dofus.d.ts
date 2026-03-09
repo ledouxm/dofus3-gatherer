@@ -1780,29 +1780,29 @@ export interface SkillData {
 //   id: Generated<number>;
 // }
 
-// export interface SubAreaData {
-//   achievements: string;
-//   areaId: number | null;
-//   associatedZaapMapId: number;
-//   basicAccountAllowed: number | null;
-//   bounds: string;
-//   capturable: number;
-//   customWorldMapId: number;
-//   displayOnWorldMap: number;
-//   dungeonId: number;
-//   exploreAchievementId: number | null;
-//   harvestables: string;
-//   id: Generated<number>;
-//   isConquestVillage: number | null;
-//   level: number;
-//   monsters: string;
-//   mountAutoTripAllowed: number;
-//   nameId: number;
-//   neighbors: string;
-//   packId: number;
-//   psiAllowed: number;
-//   shape: string;
-// }
+export interface SubAreaData {
+    achievements: string;
+    areaId: number | null;
+    associatedZaapMapId: number;
+    basicAccountAllowed: number | null;
+    bounds: string;
+    capturable: number;
+    customWorldMapId: number;
+    displayOnWorldMap: number;
+    dungeonId: number;
+    exploreAchievementId: number | null;
+    harvestables: string;
+    id: Generated<number>;
+    isConquestVillage: number | null;
+    level: number;
+    monsters: string;
+    mountAutoTripAllowed: number;
+    nameId: number;
+    neighbors: string;
+    packId: number;
+    psiAllowed: number;
+    shape: string;
+}
 
 // export interface SubAreaDataEntranceMapIdsJunction {
 //   SubAreaData_id: number | null;
@@ -2233,7 +2233,7 @@ export interface DB {
     // SpellVariantData: SpellVariantData;
     // SpellVariantData_spellIds_junction: SpellVariantDataSpellIdsJunction;
     // StealthBoneData: StealthBoneData;
-    // SubAreaData: SubAreaData;
+    SubAreaData: SubAreaData;
     // SubAreaData_entranceMapIds_junction: SubAreaDataEntranceMapIdsJunction;
     // SubAreaData_exitMapIds_junction: SubAreaDataExitMapIdsJunction;
     // SubAreaData_mapIds_junction: SubAreaDataMapIdsJunction;
