@@ -7,6 +7,7 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import { getDb, getDofusVersion, makeDofusSqliteDb } from "./db";
 import { makeSniffer } from "./sniffer/sniffer";
 import { initDofusProto } from "./init/dofus-proto";
+import { initCleanProto } from "./init/clean-proto";
 import protobuf from "protobufjs";
 import { promises as fs } from "fs";
 import { ofetch } from "ofetch";
@@ -525,6 +526,36 @@ app.whenReady().then(async () => {
     mainWindow.on("closed", () => app.quit());
 
     const templateMessage = proto.lookupType("TemplateMessage");
+
+    // Load clean (unobfuscated) proto schemas for MappingAssistant decode
+    let cleanRoot: import("protobufjs").Root | null = null;
+    try {
+        const protoDir = app.isPackaged
+            ? path.join(process.resourcesPath, "proto")
+            : path.join(__dirname, "../../resources/proto");
+        cleanRoot = initCleanProto(protoDir);
+        console.log("[clean-proto] loaded OK");
+    } catch (e) {
+        console.warn("[clean-proto] failed to load:", e);
+    }
+
+    ipcMain.handle("decode-with-clean-proto", (_event, { fullTypeName, samples }: { fullTypeName: string; samples: Array<{ obfTypeName: string; hex: string }> }) => {
+        if (!cleanRoot) return [];
+        return samples.flatMap(({ obfTypeName, hex }) => {
+            try {
+                const type = cleanRoot!.lookupType(fullTypeName);
+                const bytes = Buffer.from(hex, "hex") as any as Uint8Array;
+                const decoded = type.decode(bytes);
+                const cleanData = decoded.toJSON() as Record<string, unknown>;
+                // Filter out fully-default (all-zero/empty) results
+                const hasValues = Object.values(cleanData).some((v) => v !== 0 && v !== "" && v !== false && v !== null);
+                if (!hasValues) return [];
+                return [{ obfTypeName, cleanData }];
+            } catch {
+                return [];
+            }
+        });
+    });
 
     let serverReassemblyBuffer = Buffer.alloc(0);
 

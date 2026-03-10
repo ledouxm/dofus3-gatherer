@@ -10,6 +10,8 @@ type CandidateEntry = {
     typeName: string;
     sampleData: Record<string, unknown>;
     count: number;
+    /** Decoded clean-proto fields (camelCase), available when _raw hex was present */
+    cleanData?: Record<string, unknown>;
 };
 
 type AnalysisResult = {
@@ -18,31 +20,71 @@ type AnalysisResult = {
     autoSelected: string | null;
 };
 
-function analyzeRecording(recording: Recording): Record<string, AnalysisResult> {
-    // Group packets by typeName
-    const groups: Record<string, { data: Record<string, unknown>; count: number }[]> = {};
-    for (const entry of recording.packets) {
-        if (!groups[entry.typeName]) groups[entry.typeName] = [];
-        groups[entry.typeName].push({ data: entry.data, count: 1 });
+/**
+ * Find the dot-path inside `data` whose value matches `target` (numeric comparison).
+ * Recurses into nested objects, returning a dot-separated path like "fexe.fnjq".
+ */
+function findObfKeyByValue(data: Record<string, unknown>, target: unknown, prefix = ""): string | null {
+    const numTarget = toNum(target);
+    for (const [k, v] of Object.entries(data)) {
+        if (k === "_raw") continue;
+        const fullKey = prefix ? `${prefix}.${k}` : k;
+        const numV = toNum(v);
+        if (numTarget !== null && numV !== null && numV === numTarget) return fullKey;
+        if (v && typeof v === "object" && !Array.isArray(v)) {
+            const nested = findObfKeyByValue(v as Record<string, unknown>, target, fullKey);
+            if (nested) return nested;
+        }
     }
+    return null;
+}
 
-    // Collapse into counts + first sample per typeName
-    const byType: Record<string, { sampleData: Record<string, unknown>; count: number }> = {};
-    for (const [typeName, entries] of Object.entries(groups)) {
-        byType[typeName] = { sampleData: entries[0].data, count: entries.length };
+function toNum(v: unknown): number | null {
+    if (typeof v === "number") return v;
+    if (typeof v === "string" && v !== "" && !isNaN(Number(v))) return Number(v);
+    return null;
+}
+
+async function analyzeRecording(recording: Recording): Promise<Record<string, AnalysisResult>> {
+    // Group packets by typeName — keep one sample + count
+    const byType: Record<string, { data: Record<string, unknown>; count: number }> = {};
+    for (const entry of recording.packets) {
+        if (!byType[entry.typeName]) byType[entry.typeName] = { data: entry.data, count: 0 };
+        byType[entry.typeName].count++;
     }
 
     const results: Record<string, AnalysisResult> = {};
 
     for (const target of MAPPING_TARGETS) {
-        const candidates: CandidateEntry[] = [];
+        // Collect all samples that have a valid _raw hex string
+        const samples = Object.entries(byType)
+            .filter(([, { data }]) => typeof (data as any)._raw === "string")
+            .map(([obfTypeName, { data }]) => ({ obfTypeName, hex: (data as any)._raw as string }));
 
-        for (const [typeName, { sampleData, count }] of Object.entries(byType)) {
-            if (!matchesSchema(sampleData, target)) continue;
-            candidates.push({ typeName, sampleData, count });
+        // Ask main process to try proto decode for this target type
+        let protoMatches = new Map<string, Record<string, unknown>>();
+        if (samples.length > 0) {
+            const decoded = await window.api.decodeWithCleanProto(target.protoFullName, samples);
+            for (const { obfTypeName, cleanData } of decoded) {
+                protoMatches.set(obfTypeName, cleanData);
+            }
         }
 
-        // Sort by occurrence count descending (most frequent = most likely)
+        const candidates: CandidateEntry[] = [];
+
+        for (const [typeName, { data, count }] of Object.entries(byType)) {
+            const rawHex = typeof (data as any)._raw === "string" ? (data as any)._raw : null;
+
+            if (rawHex) {
+                // Only include if proto decode succeeded
+                const cleanData = protoMatches.get(typeName);
+                if (cleanData) candidates.push({ typeName, sampleData: data, count, cleanData });
+            } else {
+                // Old recording without _raw hex — fall back to field-count/type heuristic
+                if (matchesSchema(data, target)) candidates.push({ typeName, sampleData: data, count });
+            }
+        }
+
         candidates.sort((a, b) => b.count - a.count);
 
         results[target.id] = {
@@ -54,7 +96,7 @@ function analyzeRecording(recording: Recording): Record<string, AnalysisResult> 
     return results;
 }
 
-/** Check if a packet's data matches the target's expected field schema */
+/** Heuristic fallback for old recordings without _raw hex */
 function matchesSchema(data: Record<string, unknown>, target: MappingTarget): boolean {
     const keys = Object.keys(data).filter((k) => k !== "_raw");
     if (keys.length !== target.fields.length) return false;
@@ -68,18 +110,23 @@ export const MappingAssistant = ({ recording }: { recording: Recording | null })
     const [results, setResults] = useState<Record<string, AnalysisResult> | null>(null);
     const [selections, setSelections] = useState<Record<string, string>>({});
     const [applied, setApplied] = useState<Record<string, boolean>>({});
+    const [analyzing, setAnalyzing] = useState(false);
 
-    const handleAnalyze = () => {
+    const handleAnalyze = async () => {
         if (!recording) return;
-        const res = analyzeRecording(recording);
-        setResults(res);
-        // Pre-fill auto-selections
-        const autoSel: Record<string, string> = {};
-        for (const [id, result] of Object.entries(res)) {
-            if (result.autoSelected) autoSel[id] = result.autoSelected;
+        setAnalyzing(true);
+        try {
+            const res = await analyzeRecording(recording);
+            setResults(res);
+            const autoSel: Record<string, string> = {};
+            for (const [id, result] of Object.entries(res)) {
+                if (result.autoSelected) autoSel[id] = result.autoSelected;
+            }
+            setSelections(autoSel);
+            setApplied({});
+        } finally {
+            setAnalyzing(false);
         }
-        setSelections(autoSel);
-        setApplied({});
     };
 
     const applyMapping = async (target: MappingTarget, typeName: string) => {
@@ -88,13 +135,26 @@ export const MappingAssistant = ({ recording }: { recording: Recording | null })
         const candidate = result.candidates.find((c) => c.typeName === typeName);
         if (!candidate) return;
 
-        const dataKeys = Object.keys(candidate.sampleData).filter((k) => k !== "_raw");
-        const patch: Record<string, string | null> = {
-            [target.id]: typeName,
-        };
-        target.fields.forEach((field, i) => {
-            patch[`${target.id}.${field.configKey}`] = dataKeys[i] ?? null;
-        });
+        const patch: Record<string, string | null> = { [target.id]: typeName };
+
+        if (candidate.cleanData) {
+            // Value-based matching: use clean field values to find obfuscated keys (supports nested paths)
+            for (const field of target.fields) {
+                const cleanValue = candidate.cleanData[field.cleanFieldName];
+                if (cleanValue !== undefined && cleanValue !== null) {
+                    const obfPath = findObfKeyByValue(candidate.sampleData, cleanValue);
+                    patch[`${target.id}.${field.configKey}`] = obfPath ?? null;
+                } else {
+                    patch[`${target.id}.${field.configKey}`] = null;
+                }
+            }
+        } else {
+            // Positional fallback for old recordings
+            const dataKeys = Object.keys(candidate.sampleData).filter((k) => k !== "_raw");
+            target.fields.forEach((field, i) => {
+                patch[`${target.id}.${field.configKey}`] = dataKeys[i] ?? null;
+            });
+        }
 
         await updateConfig.mutateAsync({ mappings: { ...mappings, ...patch } as ConfigStore["mappings"] });
         setApplied((prev) => ({ ...prev, [target.id]: true }));
@@ -140,6 +200,7 @@ export const MappingAssistant = ({ recording }: { recording: Recording | null })
                         <Button
                             size="sm"
                             onClick={handleAnalyze}
+                            loading={analyzing}
                             gap={2}
                             bg="rgba(159,122,234,0.12)"
                             color="purple.300"
@@ -251,7 +312,6 @@ const TargetCard = ({
                 <Stack gap={0}>
                     {result.candidates.map((c, idx) => {
                         const isSelected = selected === c.typeName;
-                        const dataKeys = Object.keys(c.sampleData).filter((k) => k !== "_raw");
                         const isTop = idx === 0;
 
                         return (
@@ -302,6 +362,11 @@ const TargetCard = ({
                                         {c.typeName}
                                     </Text>
 
+                                    {/* Proto-decode badge */}
+                                    {c.cleanData && (
+                                        <Badge fontSize="9px" colorPalette="teal" variant="subtle" flexShrink={0}>proto</Badge>
+                                    )}
+
                                     {/* Count badge */}
                                     <Badge
                                         fontSize="9px"
@@ -338,17 +403,20 @@ const TargetCard = ({
                                 {isSelected && (
                                     <Box px={3} pb="6px">
                                         <Flex gap={3} wrap="wrap">
-                                            {target.fields.map((field, i) => {
-                                                const obfKey = dataKeys[i];
-                                                const sampleVal = obfKey ? c.sampleData[obfKey] : undefined;
+                                            {target.fields.map((field) => {
+                                                const cleanValue = c.cleanData?.[field.cleanFieldName];
+                                                const obfPath = cleanValue !== undefined
+                                                    ? findObfKeyByValue(c.sampleData, cleanValue)
+                                                    : null;
+
                                                 return (
                                                     <Flex key={field.configKey} align="center" gap={1}>
                                                         <Text fontFamily="mono" fontSize="9px" color="whiteAlpha.600">
-                                                            {obfKey ?? "?"}
+                                                            {obfPath ?? "?"}
                                                         </Text>
-                                                        {sampleVal !== undefined && (
+                                                        {cleanValue !== undefined && (
                                                             <Text fontFamily="mono" fontSize="9px" color="whiteAlpha.350">
-                                                                ={String(sampleVal)}
+                                                                ={String(cleanValue)}
                                                             </Text>
                                                         )}
                                                         <Text fontSize="9px" color="whiteAlpha.300">→</Text>
@@ -369,4 +437,3 @@ const TargetCard = ({
         </Box>
     );
 };
-

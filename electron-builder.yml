@@ -9,6 +9,8 @@ files:
 extraResources:
   - from: resources/npcap-installer.exe
     to: npcap-installer.exe
+  - from: resources/proto
+    to: proto
 win:
   target: portable
 defaultArch: x64
