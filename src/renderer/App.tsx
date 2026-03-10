@@ -12,8 +12,8 @@ import { type AppTab, TitleBar } from "./ui/TitleBar";
 import { WorldMapPickerButton } from "./ui/WorldMapPickerButton";
 import { HintsLayer } from "./dofus-map/HintsLayer";
 import { TravelButton } from "./ui/TravelButton";
-import { QuestsPanel } from "./ui/QuestsPanel";
 import { GuidesPanel } from "./ui/GuidesPanel";
+import { ExplorerPanel } from "./ui/ExplorerPanel";
 import { ViewerApp } from "./viewer/ViewerApp";
 import { Toaster, toaster } from "./ui/toaster";
 import { useUpdateCheck } from "./useUpdateCheck";
@@ -96,17 +96,6 @@ export function App() {
                 <ViewerApp />
             </div>
 
-            {/* Quests tab */}
-            <div
-                style={{
-                    display: activeTab === "donjons" ? "flex" : "none",
-                    flex: 1,
-                    overflow: "hidden",
-                }}
-            >
-                <QuestsPanel />
-            </div>
-
             {/* Guides tab */}
             <div
                 style={{
@@ -117,6 +106,18 @@ export function App() {
                 }}
             >
                 <GuidesPanel />
+            </div>
+
+            {/* Explorer tab */}
+            <div
+                style={{
+                    display: activeTab === "explorer" ? "flex" : "none",
+                    flex: 1,
+                    overflow: "hidden",
+                    flexDirection: "column",
+                }}
+            >
+                <ExplorerPanel />
             </div>
 
             {/* Admin tab */}
