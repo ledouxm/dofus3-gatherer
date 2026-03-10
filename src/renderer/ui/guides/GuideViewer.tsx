@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
 import { db } from "../../db";
-import { mapStore } from "../../providers/store";
+import { resolveTravelHandle } from "../../resolveTravelHandle";
 import { useClipboardToast } from "../useClipboardToast";
 import { GuideHtmlContent } from "./GuideHtmlContent";
 import type { GuideEntry, GuideFile, GuideProgress } from "./types";
@@ -22,9 +22,9 @@ const BG = "rgba(10, 12, 18, 0.92)";
 
 function MapCoordsButton({ x, y }: { x: number; y: number }) {
     const copy = useClipboardToast();
-    const travel = () => {
+    const travel = async () => {
         copy(`/travel ${x} ${y}`, `[${x},${y}]`);
-        const handle = mapStore.get().travelHandle;
+        const handle = await resolveTravelHandle();
         if (handle) window.api.focusWindowAndSend(handle, "travel");
     };
     return (

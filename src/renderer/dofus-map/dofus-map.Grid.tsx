@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Polyline, useMap, useMapEvents } from "react-leaflet";
 import { useConfig } from "../providers/ConfigProvider";
 import { mapStore } from "../providers/store";
+import { resolveTravelHandle } from "../resolveTravelHandle";
 import { toaster } from "../ui/toaster";
 import {
     getCellDimensions,
@@ -98,12 +99,12 @@ export function CoordDisplay({ meta }: { meta: WorldmapMeta }) {
             if (lastToastId.current) toaster.dismiss(lastToastId.current);
             lastToastId.current = toaster.create({ title: <>Copied: <b>{text}</b></>, type: "success", duration: 2000 });
         },
-        dblclick(e) {
+        async dblclick(e) {
             const sendEnabled = config.travel?.sendToProcess === true;
             if (!sendEnabled) return;
             const c = worldToDofus({ x: e.latlng.lng, y: -e.latlng.lat }, meta);
             const text = `/travel ${Math.floor(c.posX)} ${Math.floor(c.posY)}`;
-            const handle = mapStore.get().travelHandle;
+            const handle = await resolveTravelHandle();
             if (handle !== null) {
                 navigator.clipboard.writeText(text);
                 window.api.focusWindowAndSend(handle, "travel");

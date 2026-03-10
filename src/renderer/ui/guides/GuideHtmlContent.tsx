@@ -3,15 +3,15 @@ import parse, { type DOMNode, domToReact } from "html-react-parser";
 import type { Element } from "html-react-parser";
 import { useMemo } from "react";
 import { LuBookOpen, LuCheck } from "react-icons/lu";
-import { mapStore } from "../../providers/store";
+import { resolveTravelHandle } from "../../resolveTravelHandle";
 import { useClipboardToast } from "../useClipboardToast";
 
 const COORD_RE = /\[(-?\d+),\s*(-?\d+)\]/g;
 
 function InlineCoordButton({ x, y, onCopy }: { x: number; y: number; onCopy: (text: string, label: string) => void }) {
-    const travel = () => {
+    const travel = async () => {
         onCopy(`/travel ${x} ${y}`, `[${x},${y}]`);
-        const handle = mapStore.get().travelHandle;
+        const handle = await resolveTravelHandle();
         if (handle) window.api.focusWindowAndSend(handle, "travel");
     };
     return (
