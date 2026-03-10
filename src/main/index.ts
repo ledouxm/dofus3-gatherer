@@ -638,11 +638,43 @@ app.whenReady().then(async () => {
                     if (anyData?.typeUrl) {
                         const typeName = anyData.typeUrl.replace("type.ankama.com/", "");
                         const type = proto.lookupType(typeName);
-                        const decoded = type.decode(
-                            Buffer.from(anyData.value ?? "", "base64") as any as Uint8Array,
+                        const rawBytes = Buffer.from(anyData.value ?? "", "base64") as any as Uint8Array;
+                        const decoded = type.decode(rawBytes);
+                        const rawData = decoded.toJSON() as Record<string, any>;
+
+                        // Filter nullish values
+                        const data: Record<string, any> = Object.fromEntries(
+                            Object.entries(rawData).filter(([, v]) => v !== null && v !== undefined),
                         );
-                        const data = decoded.toJSON() as Record<string, any>;
-                        data._raw = Buffer.from(anyData.value ?? "", "base64").toString("hex");
+
+                        // Extract field order from raw bytes using protobuf wire format
+                        const _order: string[] = [];
+                        const _types: string[] = [];
+                        const seen = new Set<string>();
+                        try {
+                            const orderReader = protobuf.Reader.create(rawBytes);
+                            while (orderReader.pos < orderReader.len) {
+                                const tag = orderReader.uint32();
+                                const fieldNum = tag >>> 3;
+                                const wireType = tag & 7;
+                                const field = type.fieldsById[fieldNum];
+                                if (field) {
+                                    const jsonName = field.name;
+                                    if (!seen.has(jsonName) && jsonName in data) {
+                                        _order.push(jsonName);
+                                        _types.push(field.type);
+                                        seen.add(jsonName);
+                                    }
+                                }
+                                orderReader.skipType(wireType);
+                            }
+                        } catch {
+                            // partial _order/_types on malformed sub-fields; non-fatal
+                        }
+
+                        data._order = _order;
+                        data._types = _types;
+                        data._raw = Buffer.from(rawBytes).toString("hex");
                         const packetPayload = { typeName, data };
                         console.log(typeName);
                         BrowserWindow.getAllWindows().forEach((w) => {
