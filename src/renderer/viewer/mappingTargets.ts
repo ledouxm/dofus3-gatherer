@@ -57,4 +57,14 @@ export const MAPPING_TARGETS: MappingTarget[] = [
             { configKey: "skillId", cleanFieldName: "skillId", type: "number" },
         ],
     },
+    {
+        id: "ObjetHarvestedEvent",
+        label: "Objet Harvested Event",
+        action: "Harvest a resource completely (wait for the item to appear in your bag)",
+        protoFullName: "",
+        fields: [
+            { configKey: "resourceId", cleanFieldName: "objectGid", type: "number" },
+            { configKey: "elementId", cleanFieldName: "elementId", type: "number" },
+        ],
+    },
 ];

@@ -57,6 +57,7 @@ const api = {
     },
     getAppVersion: (): Promise<string> => ipcRenderer.invoke("get-app-version"),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke("open-external", url),
+    openUserDataFolder: (): Promise<void> => ipcRenderer.invoke("open-user-data-folder"),
     sql: <Q>(query: CompiledQuery<Q>): Promise<QueryResult<Q>> => ipcRenderer.invoke("sql", query),
     getRecoltables: (resourceId: string): Promise<any[]> =>
         ipcRenderer.invoke("get-recoltables", resourceId),

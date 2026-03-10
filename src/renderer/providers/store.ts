@@ -16,6 +16,9 @@ export const appStore = store<AppStore>({
             InteractiveUseEndedEvent: null,
             "InteractiveUseEndedEvent.elementId": null,
             "InteractiveUseEndedEvent.skillId": null,
+            ObjetHarvestedEvent: null,
+            "ObjetHarvestedEvent.resourceId": null,
+            "ObjetHarvestedEvent.elementId": null,
         },
         cdnBaseUrl: undefined,
     },
@@ -53,6 +56,9 @@ export type ConfigStore = {
         InteractiveUseEndedEvent: string | null;
         "InteractiveUseEndedEvent.elementId": string | null;
         "InteractiveUseEndedEvent.skillId": string | null;
+        ObjetHarvestedEvent: string | null;
+        "ObjetHarvestedEvent.resourceId": string | null;
+        "ObjetHarvestedEvent.elementId": string | null;
     };
     cdnBaseUrl?: string;
     selectedResourceIds?: number[];

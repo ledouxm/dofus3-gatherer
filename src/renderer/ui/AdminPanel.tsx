@@ -1,7 +1,8 @@
-import { Box, Button, Flex, Heading, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, Input, Stack, Switch, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { LuUpload } from "react-icons/lu";
-import { getBaseUrl } from "../providers/ConfigProvider";
+import { LuFolder, LuLeaf, LuUpload } from "react-icons/lu";
+import { getBaseUrl, useMappings } from "../providers/ConfigProvider";
+import { useHarvestMapper } from "../hooks/useHarvestMapper";
 import { configStore } from "../providers/store";
 
 interface LatestMappings {
@@ -14,6 +15,9 @@ interface LatestMappings {
 
 export const AdminPanel = ({ token }: { token: string }) => {
     const [version, setVersion] = useState("");
+    const [mapperEnabled, setMapperEnabled] = useState(false);
+    const mappings = useMappings();
+    const { sessionCount } = useHarvestMapper(mapperEnabled);
 
     useEffect(() => {
         window.api.getDofusVersion().then((v) => { if (v) setVersion(v); });
@@ -63,66 +67,128 @@ export const AdminPanel = ({ token }: { token: string }) => {
 
     return (
         <Flex flex={1} align="center" justify="center" p={8}>
-            <Box
-                bg="gray.900"
-                border="1px solid"
-                borderColor="whiteAlpha.200"
-                borderRadius="lg"
-                p={8}
-                w="100%"
-                maxW="480px"
-            >
-                <Stack gap={6}>
-                    <Heading size="md" color="whiteAlpha.900" display="flex" alignItems="center" gap={2}>
-                        <LuUpload />
-                        Upload Mappings
-                    </Heading>
+            <Stack gap={6} w="100%" maxW="480px">
+                <Box
+                    bg="gray.900"
+                    border="1px solid"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="lg"
+                    p={8}
+                    w="100%"
+                >
+                    <Stack gap={6}>
+                        <Heading size="md" color="whiteAlpha.900" display="flex" alignItems="center" gap={2}>
+                            <LuUpload />
+                            Upload Mappings
+                        </Heading>
 
-                    <Stack gap={2}>
-                        <Text fontSize="sm" color="whiteAlpha.600">
-                            Version
-                        </Text>
-                        <Input
-                            placeholder="e.g. 1.0.5"
-                            value={version}
-                            onChange={(e) => setVersion(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleUpload()}
-                            fontFamily="mono"
-                            bg="whiteAlpha.50"
-                            border="1px solid"
-                            borderColor="whiteAlpha.200"
-                            _focus={{ borderColor: "blue.400", bg: "whiteAlpha.100" }}
-                        />
-                        <Text fontSize="xs" color="whiteAlpha.400">
-                            Current mappings from config will be uploaded to{" "}
-                            <Text as="span" fontFamily="mono">
-                                {getBaseUrl()}/mappings/{version || "<version>"}
+                        <Stack gap={2}>
+                            <Text fontSize="sm" color="whiteAlpha.600">
+                                Version
                             </Text>
-                        </Text>
-                    </Stack>
+                            <Input
+                                placeholder="e.g. 1.0.5"
+                                value={version}
+                                onChange={(e) => setVersion(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleUpload()}
+                                fontFamily="mono"
+                                bg="whiteAlpha.50"
+                                border="1px solid"
+                                borderColor="whiteAlpha.200"
+                                _focus={{ borderColor: "blue.400", bg: "whiteAlpha.100" }}
+                            />
+                            <Text fontSize="xs" color="whiteAlpha.400">
+                                Current mappings from config will be uploaded to{" "}
+                                <Text as="span" fontFamily="mono">
+                                    {getBaseUrl()}/mappings/{version || "<version>"}
+                                </Text>
+                            </Text>
+                        </Stack>
 
-                    <Button
-                        onClick={handleUpload}
-                        loading={loading}
-                        disabled={!version.trim()}
-                        colorPalette="blue"
-                        size="sm"
-                        alignSelf="flex-start"
-                    >
-                        Upload to server
-                    </Button>
-
-                    {status && (
-                        <Text
-                            fontSize="sm"
-                            color={status.ok ? "green.400" : "red.400"}
-                            fontFamily="mono"
+                        <Button
+                            onClick={handleUpload}
+                            loading={loading}
+                            disabled={!version.trim()}
+                            colorPalette="blue"
+                            size="sm"
+                            alignSelf="flex-start"
                         >
-                            {status.message}
+                            Upload to server
+                        </Button>
+
+                        {status && (
+                            <Text
+                                fontSize="sm"
+                                color={status.ok ? "green.400" : "red.400"}
+                                fontFamily="mono"
+                            >
+                                {status.message}
+                            </Text>
+                        )}
+                    </Stack>
+                </Box>
+
+                <Box
+                    bg="gray.900"
+                    border="1px solid"
+                    borderColor="whiteAlpha.200"
+                    borderRadius="lg"
+                    p={8}
+                    w="100%"
+                >
+                    <Stack gap={4}>
+                        <Flex align="center" justify="space-between">
+                            <Heading size="md" color="whiteAlpha.900" display="flex" alignItems="center" gap={2}>
+                                <LuLeaf />
+                                Harvest Mapper
+                            </Heading>
+                            <Button
+                                size="xs"
+                                variant="ghost"
+                                color="whiteAlpha.500"
+                                onClick={() => window.api.openUserDataFolder()}
+                                gap={1}
+                            >
+                                <LuFolder size={12} />
+                                Open folder
+                            </Button>
+                        </Flex>
+
+                        <Text fontSize="sm" color="whiteAlpha.600">
+                            Automatically records <Text as="span" fontFamily="mono">elementId → resourceId</Text> by
+                            correlating <Text as="span" fontFamily="mono">InteractiveUsedEvent</Text> with the next{" "}
+                            <Text as="span" fontFamily="mono">ObjetHarvestedEvent</Text> within 5 seconds.
+                            Saved to <Text as="span" fontFamily="mono">element-resource-mappings.json</Text>.
                         </Text>
-                    )}
-                </Stack>
-            </Box>
+
+                        <Flex align="center" gap={3}>
+                            <Switch.Root
+                                checked={mapperEnabled}
+                                onCheckedChange={(e) => setMapperEnabled(e.checked)}
+                                colorPalette="yellow"
+                            >
+                                <Switch.HiddenInput />
+                                <Switch.Control />
+                                <Switch.Label fontSize="sm" color="whiteAlpha.800">
+                                    {mapperEnabled ? "Active" : "Inactive"}
+                                </Switch.Label>
+                            </Switch.Root>
+                        </Flex>
+
+                        {!mappings.ObjetHarvestedEvent && (
+                            <Text fontSize="sm" color="orange.400">
+                                ObjetHarvestedEvent is not configured — use the Mapping Assistant to set it up.
+                            </Text>
+                        )}
+
+                        {sessionCount > 0 && (
+                            <Text fontSize="sm" color="green.400" fontFamily="mono">
+                                {sessionCount} {sessionCount === 1 ? "entry" : "entries"} saved this session.
+                            </Text>
+                        )}
+                    </Stack>
+                </Box>
+            </Stack>
         </Flex>
     );
 };

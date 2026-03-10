@@ -5,8 +5,13 @@ import "./index.css";
 
 import { Box, CloseButton, Dialog, Flex, Text } from "@chakra-ui/react";
 import { LuSettings } from "react-icons/lu";
-import { useBaseUrl, useConfig, useUpdateConfigMutation } from "./providers/ConfigProvider";
-import { CenterOnCharacterButton, CharacterPosition } from "./game/character-position";
+import {
+    useBaseUrl,
+    useConfig,
+    useMappings,
+    useUpdateConfigMutation,
+} from "./providers/ConfigProvider";
+import { CenterOnCharacterButton, CharacterPosition, Test } from "./game/character-position";
 import { HintFilterButton } from "./ui/HintCategoryButtons";
 import { ResourcePickerButton } from "./ui/ResourcePickerButton";
 import { type AppTab, TitleBar } from "./ui/TitleBar";
@@ -22,6 +27,7 @@ import { useMappingsSync } from "./useMappingsSync";
 import { CoordDisplay } from "./dofus-map/dofus-map.Grid";
 import { AdminPanel } from "./ui/AdminPanel";
 import { useInteractiveEvents } from "./game/useInteractiveEvents";
+import { useDofusEvent } from "./useDofusEvent";
 
 export function App() {
     const baseUrl = useBaseUrl();
@@ -94,7 +100,15 @@ export function App() {
             <Dialog.Root open={configOpen} onOpenChange={(d) => setConfigOpen(d.open)} size="lg">
                 <Dialog.Backdrop />
                 <Dialog.Positioner>
-                    <Dialog.Content bg="gray.900" border="1px solid" borderColor="whiteAlpha.200" maxW="640px" maxH="80vh" display="flex" flexDirection="column">
+                    <Dialog.Content
+                        bg="gray.900"
+                        border="1px solid"
+                        borderColor="whiteAlpha.200"
+                        maxW="640px"
+                        maxH="80vh"
+                        display="flex"
+                        flexDirection="column"
+                    >
                         <Dialog.Header pb={2} flexShrink={0}>
                             <Dialog.Title>
                                 <Flex align="center" gap={2}>
@@ -125,15 +139,17 @@ export function App() {
                         </>
                     )}
                 </DofusLeafletMap>
-                <div style={{
-                    position: "absolute",
-                    bottom: "8px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    display: "flex",
-                    gap: "4px",
-                    zIndex: 1000,
-                }}>
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: "8px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        display: "flex",
+                        gap: "4px",
+                        zIndex: 1000,
+                    }}
+                >
                     <ResourcePickerButton />
                     <WorldMapPickerButton />
                     <HintFilterButton />
@@ -142,23 +158,49 @@ export function App() {
             </div>
 
             {/* Viewer tab */}
-            <div style={{ display: activeTab === "viewer" ? "flex" : "none", flex: 1, overflow: "hidden" }}>
+            <div
+                style={{
+                    display: activeTab === "viewer" ? "flex" : "none",
+                    flex: 1,
+                    overflow: "hidden",
+                }}
+            >
                 <ViewerApp />
             </div>
 
             {/* Guides tab */}
-            <div style={{ display: activeTab === "guides" ? "flex" : "none", flex: 1, overflow: "hidden", flexDirection: "column" }}>
+            <div
+                style={{
+                    display: activeTab === "guides" ? "flex" : "none",
+                    flex: 1,
+                    overflow: "hidden",
+                    flexDirection: "column",
+                }}
+            >
                 <GuidesPanel />
             </div>
 
             {/* Explorer tab */}
-            <div style={{ display: activeTab === "explorer" ? "flex" : "none", flex: 1, overflow: "hidden", flexDirection: "column" }}>
+            <div
+                style={{
+                    display: activeTab === "explorer" ? "flex" : "none",
+                    flex: 1,
+                    overflow: "hidden",
+                    flexDirection: "column",
+                }}
+            >
                 <ExplorerPanel />
             </div>
 
             {/* Admin tab */}
             {adminToken && (
-                <div style={{ display: activeTab === "admin" ? "flex" : "none", flex: 1, overflow: "hidden" }}>
+                <div
+                    style={{
+                        display: activeTab === "admin" ? "flex" : "none",
+                        flex: 1,
+                        overflow: "hidden",
+                    }}
+                >
                     <AdminPanel token={adminToken} />
                 </div>
             )}

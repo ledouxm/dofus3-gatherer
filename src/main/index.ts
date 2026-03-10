@@ -299,6 +299,7 @@ app.whenReady().then(async () => {
     ipcMain.handle("get-mappings-sync-result", () => mappingsSyncPromise);
     ipcMain.handle("get-app-version", () => app.getVersion());
     ipcMain.handle("open-external", (_event, url: string) => shell.openExternal(url));
+    ipcMain.handle("open-user-data-folder", () => shell.openPath(process.env.USER_DATA_PATH!));
     ipcMain.handle("sql", (_event, query) => getDb().executeQuery(query));
     ipcMain.handle("toggle-always-on-top", async () => {
         const mainWin = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
