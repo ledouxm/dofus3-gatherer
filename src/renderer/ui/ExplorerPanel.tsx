@@ -1,7 +1,7 @@
-import { Badge, Box, HStack, Input, Text, VStack } from "@chakra-ui/react";
+import { Badge, Box, Button, HStack, Input, Text, VStack } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { sql, type SqlBool } from "kysely";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDebounce } from "react-use";
 import {
     LuArrowLeft,
@@ -17,6 +17,7 @@ import { db } from "../db";
 import { getItemIconUrl } from "../resources/ResourcesList";
 import { ClickableCoords } from "./ClickableCoords";
 import { QuestsPanel } from "./QuestsPanel";
+import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
 
 const panelBg = "rgba(10, 12, 18, 0.85)";
 const border = "1px solid rgba(255,255,255,0.1)";
@@ -368,11 +369,21 @@ function EmptyState({ text }: { text: string }) {
 // ─── Quest section ────────────────────────────────────────────────────────────
 
 function QuestSearchSection() {
+    const config = useConfig();
+    const updateConfig = useUpdateConfigMutation();
     const [input, setInput] = useState("");
     const [debouncedInput, setDebouncedInput] = useState("");
     const [selectedQuest, setSelectedQuest] = useState<QuestRow | null>(null);
 
     useDebounce(() => setDebouncedInput(input), 200, [input]);
+
+    const history = (config?.explorer?.questsHistory ?? []) as QuestRow[];
+
+    const handleSelectQuest = (q: QuestRow) => {
+        setSelectedQuest(q);
+        const newHistory = [q, ...history.filter((h) => h.id !== q.id)].slice(0, 10);
+        updateConfig.mutate({ explorer: { ...(config?.explorer ?? {}), questsHistory: newHistory } });
+    };
 
     const { data: results = [], isFetching } = useQuery({
         queryKey: ["explorer-quests", debouncedInput],
@@ -472,7 +483,30 @@ function QuestSearchSection() {
         <VStack flex={1} overflow="hidden" align="stretch" gap={0} px={3} py={3}>
             <SearchInput value={input} onChange={setInput} placeholder="Nom ou ID de quête…" />
             <Box flex={1} overflowY="auto" mt={2}>
-                {!debouncedInput.trim() && (
+                {!debouncedInput.trim() && history.length > 0 && (
+                    <Box mb={3}>
+                        <Text fontSize="10px" color="whiteAlpha.400" fontWeight="600" letterSpacing="wider" mb={2}>
+                            RÉCENTS
+                        </Text>
+                        <HStack wrap="wrap" gap={1}>
+                            {history.map((h) => (
+                                <Button
+                                    key={h.id}
+                                    size="xs"
+                                    variant="outline"
+                                    borderColor="rgba(255,255,255,0.1)"
+                                    color="whiteAlpha.500"
+                                    bg="transparent"
+                                    _hover={{ bg: "rgba(255,255,255,0.06)", color: "whiteAlpha.900", borderColor: "rgba(255,255,255,0.2)" }}
+                                    onClick={() => handleSelectQuest(h)}
+                                >
+                                    {h.name}
+                                </Button>
+                            ))}
+                        </HStack>
+                    </Box>
+                )}
+                {!debouncedInput.trim() && history.length === 0 && (
                     <EmptyState text="Recherchez une quête par nom ou par ID numérique." />
                 )}
                 {debouncedInput.trim() && !isFetching && results.length === 0 && (
@@ -489,7 +523,7 @@ function QuestSearchSection() {
                             border={border}
                             cursor="pointer"
                             _hover={{ bg: "rgba(255,255,255,0.07)" }}
-                            onClick={() => setSelectedQuest(q)}
+                            onClick={() => handleSelectQuest(q)}
                             gap={2}
                             flexWrap="wrap"
                         >
@@ -526,11 +560,21 @@ function QuestSearchSection() {
 // ─── Item section ─────────────────────────────────────────────────────────────
 
 function ItemSearchSection() {
+    const config = useConfig();
+    const updateConfig = useUpdateConfigMutation();
     const [input, setInput] = useState("");
     const [debouncedInput, setDebouncedInput] = useState("");
     const [selectedItem, setSelectedItem] = useState<ItemRow | null>(null);
 
     useDebounce(() => setDebouncedInput(input), 200, [input]);
+
+    const history = (config?.explorer?.itemsHistory ?? []) as ItemRow[];
+
+    const handleSelectItem = (item: ItemRow) => {
+        setSelectedItem(item);
+        const newHistory = [item, ...history.filter((h) => h.id !== item.id)].slice(0, 10);
+        updateConfig.mutate({ explorer: { ...(config?.explorer ?? {}), itemsHistory: newHistory } });
+    };
 
     const { data: results = [], isFetching } = useQuery({
         queryKey: ["explorer-items", debouncedInput],
@@ -643,7 +687,30 @@ function ItemSearchSection() {
         <VStack flex={1} overflow="hidden" align="stretch" gap={0} px={3} py={3}>
             <SearchInput value={input} onChange={setInput} placeholder="Nom ou ID d'objet…" />
             <Box flex={1} overflowY="auto" mt={2}>
-                {!debouncedInput.trim() && (
+                {!debouncedInput.trim() && history.length > 0 && (
+                    <Box mb={3}>
+                        <Text fontSize="10px" color="whiteAlpha.400" fontWeight="600" letterSpacing="wider" mb={2}>
+                            RÉCENTS
+                        </Text>
+                        <HStack wrap="wrap" gap={1}>
+                            {history.map((h) => (
+                                <Button
+                                    key={h.id}
+                                    size="xs"
+                                    variant="outline"
+                                    borderColor="rgba(255,255,255,0.1)"
+                                    color="whiteAlpha.500"
+                                    bg="transparent"
+                                    _hover={{ bg: "rgba(255,255,255,0.06)", color: "whiteAlpha.900", borderColor: "rgba(255,255,255,0.2)" }}
+                                    onClick={() => handleSelectItem(h)}
+                                >
+                                    {h.name}
+                                </Button>
+                            ))}
+                        </HStack>
+                    </Box>
+                )}
+                {!debouncedInput.trim() && history.length === 0 && (
                     <EmptyState text="Recherchez un objet par nom ou par ID numérique." />
                 )}
                 {debouncedInput.trim() && !isFetching && results.length === 0 && (
@@ -660,7 +727,7 @@ function ItemSearchSection() {
                             border={border}
                             cursor="pointer"
                             _hover={{ bg: "rgba(255,255,255,0.07)" }}
-                            onClick={() => setSelectedItem(item)}
+                            onClick={() => handleSelectItem(item)}
                             gap={2}
                         >
                             <ItemIcon iconId={item.iconId} size={24} />
@@ -679,11 +746,21 @@ function ItemSearchSection() {
 // ─── Zone section ─────────────────────────────────────────────────────────────
 
 function ZoneExplorerSection() {
+    const config = useConfig();
+    const updateConfig = useUpdateConfigMutation();
     const [input, setInput] = useState("");
     const [debouncedInput, setDebouncedInput] = useState("");
     const [selected, setSelected] = useState<SubAreaRow | null>(null);
 
     useDebounce(() => setDebouncedInput(input), 200, [input]);
+
+    const history = (config?.explorer?.zonesHistory ?? []) as SubAreaRow[];
+
+    const handleSelectZone = (zone: SubAreaRow) => {
+        setSelected(zone);
+        const newHistory = [zone, ...history.filter((h) => h.id !== zone.id)].slice(0, 10);
+        updateConfig.mutate({ explorer: { ...(config?.explorer ?? {}), zonesHistory: newHistory } });
+    };
 
     const { data: results = [], isFetching } = useQuery({
         queryKey: ["explorer-zones", debouncedInput],
@@ -761,7 +838,30 @@ function ZoneExplorerSection() {
         <VStack flex={1} overflow="hidden" align="stretch" gap={0} px={3} py={3}>
             <SearchInput value={input} onChange={setInput} placeholder="Nom de zone…" />
             <Box flex={1} overflowY="auto" mt={2}>
-                {!debouncedInput.trim() && results.length === 0 && (
+                {!debouncedInput.trim() && history.length > 0 && results.length === 0 && (
+                    <Box mb={3}>
+                        <Text fontSize="10px" color="whiteAlpha.400" fontWeight="600" letterSpacing="wider" mb={2}>
+                            RÉCENTS
+                        </Text>
+                        <HStack wrap="wrap" gap={1}>
+                            {history.map((h) => (
+                                <Button
+                                    key={h.id}
+                                    size="xs"
+                                    variant="outline"
+                                    borderColor="rgba(255,255,255,0.1)"
+                                    color="whiteAlpha.500"
+                                    bg="transparent"
+                                    _hover={{ bg: "rgba(255,255,255,0.06)", color: "whiteAlpha.900", borderColor: "rgba(255,255,255,0.2)" }}
+                                    onClick={() => handleSelectZone(h)}
+                                >
+                                    {h.name}
+                                </Button>
+                            ))}
+                        </HStack>
+                    </Box>
+                )}
+                {!debouncedInput.trim() && history.length === 0 && results.length === 0 && (
                     <EmptyState text="Toutes les zones s'affichent ici. Tapez pour filtrer." />
                 )}
                 {debouncedInput.trim() && !isFetching && results.length === 0 && (
@@ -778,7 +878,7 @@ function ZoneExplorerSection() {
                             border={border}
                             cursor="pointer"
                             _hover={{ bg: "rgba(255,255,255,0.07)" }}
-                            onClick={() => setSelected(zone)}
+                            onClick={() => handleSelectZone(zone)}
                             gap={2}
                         >
                             <LuMap size={12} color="rgba(255,255,255,0.35)" style={{ flexShrink: 0 }} />
@@ -814,7 +914,22 @@ const SECTIONS: { id: ExplorerSection; label: string }[] = [
 ];
 
 export function ExplorerPanel() {
+    const config = useConfig();
+    const updateConfig = useUpdateConfigMutation();
     const [section, setSection] = useState<ExplorerSection>("donjons");
+    const hasRestoredSection = useRef(false);
+
+    useEffect(() => {
+        if (!config || hasRestoredSection.current) return;
+        hasRestoredSection.current = true;
+        const saved = config.explorer?.section as ExplorerSection | undefined;
+        if (saved) setSection(saved);
+    }, [config]);
+
+    const handleSectionChange = (s: ExplorerSection) => {
+        setSection(s);
+        updateConfig.mutate({ explorer: { section: s } });
+    };
 
     return (
         <Box
@@ -837,7 +952,7 @@ export function ExplorerPanel() {
                         <Box
                             key={s.id}
                             as="button"
-                            onClick={() => setSection(s.id)}
+                            onClick={() => handleSectionChange(s.id)}
                             px="14px"
                             h="32px"
                             fontSize="10px"

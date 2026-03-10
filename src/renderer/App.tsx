@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DofusLeafletMap } from "./dofus-map/DofusLeafletMap";
 import { RecoltablesLayer } from "./dofus-map/RecoltablesLayer";
 import "./index.css";
 
-import { useBaseUrl } from "./providers/ConfigProvider";
+import { useBaseUrl, useConfig, useUpdateConfigMutation } from "./providers/ConfigProvider";
 import { CenterOnCharacterButton, CharacterPosition } from "./game/character-position";
 import { ConfigButton } from "./ui/ConfigButton";
 import { HintCategoryButtons } from "./ui/HintCategoryButtons";
@@ -23,10 +23,25 @@ import { AdminPanel } from "./ui/AdminPanel";
 
 export function App() {
     const baseUrl = useBaseUrl();
+    const config = useConfig();
+    const updateConfig = useUpdateConfigMutation();
     const [activeTab, setActiveTab] = useState<AppTab>("map");
+    const hasRestoredTab = useRef(false);
     const [adminToken, setAdminToken] = useState<string | null>(null);
     const updateInfo = useUpdateCheck();
     const mappingsSynced = useMappingsSync();
+
+    useEffect(() => {
+        if (!config || hasRestoredTab.current) return;
+        hasRestoredTab.current = true;
+        const saved = config.activeTab as AppTab | undefined;
+        if (saved) setActiveTab(saved);
+    }, [config]);
+
+    const handleTabChange = (tab: AppTab) => {
+        setActiveTab(tab);
+        updateConfig.mutate({ activeTab: tab });
+    };
 
     useEffect(() => {
         window.api.getAdminToken().then(setAdminToken);
@@ -63,7 +78,7 @@ export function App() {
     return (
         <div className="app">
             <Toaster />
-            <TitleBar activeTab={activeTab} onTabChange={setActiveTab} showAdminTab={!!adminToken} />
+            <TitleBar activeTab={activeTab} onTabChange={handleTabChange} showAdminTab={!!adminToken} />
 
             {/* Map tab */}
             <div className="app-map" style={{ display: activeTab === "map" ? undefined : "none" }}>

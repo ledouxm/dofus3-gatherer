@@ -62,6 +62,13 @@ export type ConfigStore = {
         openedTabIds?: number[];
         activeTabId?: number | null;
     };
+    activeTab?: string;
+    explorer?: {
+        section?: string;
+        questsHistory?: unknown[];
+        itemsHistory?: unknown[];
+        zonesHistory?: unknown[];
+    };
 };
 
 export type TranslationStore = {
