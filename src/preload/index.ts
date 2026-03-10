@@ -96,6 +96,7 @@ const api = {
         ipcRenderer.invoke("get-open-windows"),
     focusWindowAndSend: (handle: number, action: "H" | "travel"): Promise<void> =>
         ipcRenderer.invoke("focus-window-and-send", { handle, action }),
+    openTravelWindow: (): Promise<void> => ipcRenderer.invoke("open-travel-window"),
     onAnyServerPacket: (
         listener: (event: Electron.IpcRendererEvent, data: { typeName: string; data: unknown }) => void,
     ) => ipcRenderer.on("server-packet-broadcast", listener),

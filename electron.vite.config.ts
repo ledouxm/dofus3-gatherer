@@ -10,5 +10,13 @@ export default defineConfig({
     },
     renderer: {
         plugins: [react()],
+        build: {
+            rollupOptions: {
+                input: {
+                    index: "src/renderer/index.html",
+                    travel: "src/renderer/travel-window.html",
+                },
+            },
+        },
     },
 });

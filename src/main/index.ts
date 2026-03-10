@@ -92,6 +92,28 @@ async function setCachedRecoltables(
     const cachePath = path.join(cacheDir, `recoltables-${resourceId}.json`);
     await fs.writeFile(cachePath, JSON.stringify({ timestamp: Date.now(), data }), "utf-8");
 }
+function createTravelWindow(): BrowserWindow {
+    const win = new BrowserWindow({
+        width: 320,
+        height: 300,
+        show: false,
+        frame: false,
+        backgroundColor: "#0a0a0a",
+        autoHideMenuBar: true,
+        webPreferences: {
+            preload: path.join(__dirname, "../preload/index.js"),
+            sandbox: false,
+        },
+    });
+    win.on("ready-to-show", () => win.show());
+    if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+        win.loadURL(process.env["ELECTRON_RENDERER_URL"] + "/travel-window.html");
+    } else {
+        win.loadFile(path.join(__dirname, "../renderer/travel-window.html"));
+    }
+    return win;
+}
+
 async function createWindow(configDir: string) {
     const savedConfig = await readMainConfig(configDir);
     const bounds = savedConfig.windowBounds ?? { width: 900, height: 670 };
@@ -238,6 +260,17 @@ app.whenReady().then(async () => {
         app.quit();
         return;
     }
+
+    // Travel window (singleton)
+    let travelWindow: BrowserWindow | null = null;
+    ipcMain.handle("open-travel-window", () => {
+        if (travelWindow && !travelWindow.isDestroyed()) {
+            travelWindow.focus();
+            return;
+        }
+        travelWindow = createTravelWindow();
+        travelWindow.on("closed", () => { travelWindow = null; });
+    });
 
     // Start mappings sync in background (non-blocking)
     const cdnBaseUrl = existingConfig.cdnBaseUrl || env.VITE_CDN_BASE_URL || "";

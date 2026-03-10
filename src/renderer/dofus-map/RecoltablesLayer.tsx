@@ -39,6 +39,7 @@ interface Props {
 export const RecoltablesLayer = ({ meta }: Props) => {
     const selectedResourceIds = useStoreValue(mapStore, (s) => s.selectedResourceIds);
     const selectedWorldmapId = useStoreValue(mapStore, (s) => s.selectedWorldmapId);
+    const highlightedResourceIds = useStoreValue(mapStore, (s) => s.highlightedResourceIds);
 
     const iconsQueries = useQueries({
         queries: selectedResourceIds.map((resId) => ({
@@ -123,6 +124,7 @@ export const RecoltablesLayer = ({ meta }: Props) => {
                     coords: aggregateByPosition(recoltables, Number(resId), multiResourcePositions),
                     spriteSize: (zoom) =>
                         Math.max(6, meta.mapWidth * Math.pow(2, zoom - meta.z_max) * 1.2),
+                    highlighted: highlightedResourceIds.includes(Number(resId)),
                 }))}
             />
             <HoverCellLayer

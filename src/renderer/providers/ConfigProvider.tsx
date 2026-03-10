@@ -26,6 +26,9 @@ export const ConfigProvider = ({ children }: PropsWithChildren) => {
             if (response.centerOnCharacter !== undefined) {
                 mapStore.set((v) => ({ ...v, centerOnCharacter: response.centerOnCharacter! }));
             }
+            if (response.highlightedResourceIds) {
+                mapStore.set((v) => ({ ...v, highlightedResourceIds: response.highlightedResourceIds! }));
+            }
             if (response.characterPosition) {
                 gameStore.set((state) => ({ ...state, character: response.characterPosition }));
             }

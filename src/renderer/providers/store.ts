@@ -24,6 +24,8 @@ export const appStore = store<AppStore>({
         centerOnCharacter: true,
         selectedHintCategoryIds: [] as number[],
         travelHandle: null,
+        highlightedResourceIds: [] as number[],
+        hoveredHintName: null,
     },
 });
 
@@ -62,6 +64,8 @@ export type ConfigStore = {
         openedTabIds?: number[];
         activeTabId?: number | null;
     };
+    resourcePresets?: Array<{ id: string; name: string; iconItemId: number; resourceIds: number[] }>;
+    highlightedResourceIds?: number[];
     activeTab?: string;
     explorer?: {
         section?: string;
@@ -87,5 +91,7 @@ export type AppStore = {
         centerOnCharacter: boolean;
         selectedHintCategoryIds: number[];
         travelHandle: number | null;
+        highlightedResourceIds: number[];
+        hoveredHintName: string | null;
     };
 };

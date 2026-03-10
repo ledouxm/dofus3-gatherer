@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef } from "react";
 import { useMap, useMapEvents } from "react-leaflet";
 import { useStoreValue } from "@simplestack/store/react";
 import { db } from "../db";
@@ -29,7 +28,6 @@ export const HintsLayer = ({ meta }: Props) => {
     const selectedWorldmapId = useStoreValue(mapStore, (s) => s.selectedWorldmapId);
     const selectedHintCategoryIds = useStoreValue(mapStore, (s) => s.selectedHintCategoryIds);
     const drawRef = useRef<() => void>(() => {});
-    const [tooltip, setTooltip] = useState<{ name: string; x: number; y: number } | null>(null);
 
     const { data: hints } = useQuery({
         queryKey: ["hints", selectedWorldmapId],
@@ -131,7 +129,7 @@ export const HintsLayer = ({ meta }: Props) => {
 
     useMapEvents({
         mousemove(e) {
-            if (!visibleHints.length) { setTooltip(null); return; }
+            if (!visibleHints.length) { mapStore.set((v) => ({ ...v, hoveredHintName: null })); return; }
             let best: { dist: number; hint: HintPoint } | null = null;
             for (const hint of visibleHints) {
                 const { x, y } = dofusToWorld({ posX: hint.x, posY: hint.y }, meta);
@@ -142,48 +140,18 @@ export const HintsLayer = ({ meta }: Props) => {
                 }
             }
             if (best) {
-                const { x, y } = dofusToWorld({ posX: best.hint.x, posY: best.hint.y }, meta);
-                const pt = map.latLngToContainerPoint([-(y + cellH / 2), x + cellW / 2]);
-                const rect = map.getContainer().getBoundingClientRect();
                 const hintName = getTranslation(best.hint.nameId);
                 const subareaName = best.hint.subareaNameId ? getTranslation(best.hint.subareaNameId) : null;
                 const name = hintName === "Zaap" && subareaName ? `Zaap - ${subareaName}` : hintName;
-                setTooltip({
-                    name,
-                    x: rect.left + pt.x,
-                    y: rect.top + pt.y,
-                });
+                mapStore.set((v) => ({ ...v, hoveredHintName: name }));
             } else {
-                setTooltip(null);
+                mapStore.set((v) => ({ ...v, hoveredHintName: null }));
             }
         },
         mouseout() {
-            setTooltip(null);
+            mapStore.set((v) => ({ ...v, hoveredHintName: null }));
         },
     });
 
-    return createPortal(
-        <div
-            style={{
-                position: "fixed",
-                top: tooltip ? tooltip.y + 10 : 0,
-                left: tooltip ? tooltip.x : 0,
-                transform: "translateX(-50%)",
-                zIndex: 1000,
-                background: "rgba(0,0,0,0.85)",
-                padding: "5px 10px",
-                borderRadius: 6,
-                color: "#eee",
-                fontFamily: "sans-serif",
-                fontSize: 12,
-                whiteSpace: "nowrap",
-                opacity: tooltip ? 1 : 0,
-                pointerEvents: "none",
-                transition: "opacity 0.15s ease",
-            }}
-        >
-            {tooltip?.name}
-        </div>,
-        document.body,
-    );
+    return null;
 };

@@ -1,6 +1,6 @@
 import { Box, HStack, IconButton } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
-import { LuMinus, LuPin, LuX } from "react-icons/lu";
+import { LuMinus, LuNavigation2, LuPin, LuSettings, LuX } from "react-icons/lu";
 
 export type AppTab = "map" | "viewer" | "admin" | "guides" | "explorer";
 
@@ -18,9 +18,11 @@ interface TitleBarProps {
     activeTab: AppTab;
     onTabChange: (tab: AppTab) => void;
     showAdminTab?: boolean;
+    onOpenConfig?: () => void;
+    onOpenTravelWindow?: () => void;
 }
 
-export const TitleBar = ({ activeTab, onTabChange, showAdminTab }: TitleBarProps) => {
+export const TitleBar = ({ activeTab, onTabChange, showAdminTab, onOpenConfig, onOpenTravelWindow }: TitleBarProps) => {
     const tabs = showAdminTab
         ? [...BASE_TABS, { id: "admin" as AppTab, label: "ADMIN" }]
         : BASE_TABS;
@@ -47,7 +49,7 @@ export const TitleBar = ({ activeTab, onTabChange, showAdminTab }: TitleBarProps
             borderBottom="1px solid rgba(255,255,255,0.08)"
         >
             <HStack w="full" justifyContent="space-between" gap={0} alignItems="stretch">
-                {/* Left side: pin + DEV badge */}
+                {/* Left side: pin + gear + DEV badge */}
                 <HStack gap={0} alignItems="center" flex={1}>
                     <Box style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
                         <IconButton
@@ -60,6 +62,30 @@ export const TitleBar = ({ activeTab, onTabChange, showAdminTab }: TitleBarProps
                             _hover={{ color: "white" }}
                         >
                             <LuPin />
+                        </IconButton>
+                    </Box>
+                    <Box style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+                        <IconButton
+                            aria-label="Config"
+                            size="xs"
+                            variant="ghost"
+                            color="whiteAlpha.600"
+                            _hover={{ color: "white" }}
+                            onClick={onOpenConfig}
+                        >
+                            <LuSettings />
+                        </IconButton>
+                    </Box>
+                    <Box style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+                        <IconButton
+                            aria-label="Actions rapides"
+                            size="xs"
+                            variant="ghost"
+                            color="whiteAlpha.600"
+                            _hover={{ color: "white" }}
+                            onClick={onOpenTravelWindow}
+                        >
+                            <LuNavigation2 />
                         </IconButton>
                     </Box>
                     {import.meta.env.DEV && (

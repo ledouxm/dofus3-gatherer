@@ -8,6 +8,7 @@ import {
     LuStar,
     LuTrash2,
 } from "react-icons/lu";
+import { useConfig } from "../providers/ConfigProvider";
 import type { PacketEntry, RecordingMeta } from "./usePacketRecorder";
 import {
     formatDuration,
@@ -28,6 +29,7 @@ export const RecordingLibrary = ({ onLoad, activeFilename }: RecordingLibraryPro
     const [sources, setSources] = useState<Source[]>([]);
     const [selectedSourceId, setSelectedSourceId] = useState<string>("");
     const [stream, setStream] = useState<MediaStream | null>(null);
+    const config = useConfig();
 
     const { status, duration, start, stop, reset } = usePacketRecorder();
     const { sorted, loading, refresh, toggleFavorite, moveFavoriteUp, moveFavoriteDown, deleteRecording, renameRecording } = useRecordings();
@@ -38,7 +40,12 @@ export const RecordingLibrary = ({ onLoad, activeFilename }: RecordingLibraryPro
     useEffect(() => {
         window.api.getDesktopSources().then((srcs) => {
             setSources(srcs);
-            if (srcs.length > 0) setSelectedSourceId(srcs[0].id);
+            if (srcs.length === 0) return;
+            const savedTitle = config?.travel?.selectedWindowTitle;
+            const match = savedTitle
+                ? srcs.find((s) => s.name === savedTitle || s.name.includes(savedTitle.replace(" - Release", "")))
+                : null;
+            setSelectedSourceId(match ? match.id : srcs[0].id);
         });
     }, []);
 
