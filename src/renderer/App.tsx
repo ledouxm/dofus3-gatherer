@@ -21,6 +21,7 @@ import { useUpdateCheck } from "./useUpdateCheck";
 import { useMappingsSync } from "./useMappingsSync";
 import { CoordDisplay } from "./dofus-map/dofus-map.Grid";
 import { AdminPanel } from "./ui/AdminPanel";
+import { useInteractiveEvents } from "./game/useInteractiveEvents";
 
 export function App() {
     const baseUrl = useBaseUrl();
@@ -32,6 +33,7 @@ export function App() {
     const [configOpen, setConfigOpen] = useState(false);
     const updateInfo = useUpdateCheck();
     const mappingsSynced = useMappingsSync();
+    useInteractiveEvents();
 
     useEffect(() => {
         if (!config || hasRestoredTab.current) return;

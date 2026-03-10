@@ -13,6 +13,9 @@ import { PacketTimeline, typeColor } from "./PacketTimeline";
 import { type PacketEntry, type Recording, formatMs } from "./usePacketRecorder";
 import { VideoPlayer } from "./VideoPlayer";
 import { RecordingLibrary } from "./RecordingLibrary";
+import { MappingAssistant } from "./MappingAssistant";
+
+type RightPanelTab = "packets" | "assistant";
 
 /**
  * Packet Viewer tab.
@@ -27,6 +30,7 @@ export const ViewerApp = () => {
     const [activeFilename, setActiveFilename] = useState<string | null>(null);
     const [currentMs, setCurrentMs] = useState(0);
     const [selectedPacket, setSelectedPacket] = useState<PacketEntry | null>(null);
+    const [rightTab, setRightTab] = useState<RightPanelTab>("packets");
 
     const handleLoad = useCallback((rec: Recording & { filename: string }) => {
         setRecording(rec);
@@ -133,26 +137,58 @@ export const ViewerApp = () => {
 
                 <Separator style={{ width: "4px", cursor: "col-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
 
-                {/* Right side: packet list + JSON detail */}
-                <Panel defaultSize={38} minSize={20} style={{ display: "flex", overflow: "hidden" }}>
-                    <Group orientation="vertical" style={{ flex: 1, overflow: "hidden" }}>
-                        {/* Packet timeline */}
-                        <Panel defaultSize={60} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                            <PacketTimeline
-                                packets={recording?.packets ?? []}
-                                currentMs={currentMs}
-                                onSelect={setSelectedPacket}
-                                selectedPacket={selectedPacket}
-                            />
-                        </Panel>
+                {/* Right side: tab toggle + packet list/assistant */}
+                <Panel defaultSize={38} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                    {/* Tab bar */}
+                    <Flex
+                        flexShrink={0}
+                        borderBottom="1px solid"
+                        borderColor="whiteAlpha.100"
+                        bg="gray.900"
+                    >
+                        {(["packets", "assistant"] as RightPanelTab[]).map((tab) => (
+                            <Box
+                                key={tab}
+                                as="button"
+                                px={3}
+                                py="5px"
+                                fontSize="10px"
+                                fontWeight="semibold"
+                                textTransform="uppercase"
+                                letterSpacing="wider"
+                                borderBottom="2px solid"
+                                borderColor={rightTab === tab ? "purple.400" : "transparent"}
+                                color={rightTab === tab ? "purple.300" : "whiteAlpha.400"}
+                                _hover={{ color: "whiteAlpha.700" }}
+                                onClick={() => setRightTab(tab)}
+                                transition="color 0.1s"
+                            >
+                                {tab}
+                            </Box>
+                        ))}
+                    </Flex>
 
-                        <Separator style={{ height: "4px", cursor: "row-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
-
-                        {/* JSON detail */}
-                        <Panel defaultSize={40} minSize={10} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                            <JsonDetail packet={selectedPacket} />
-                        </Panel>
-                    </Group>
+                    {/* Panel content */}
+                    {rightTab === "packets" ? (
+                        <Group orientation="vertical" style={{ flex: 1, overflow: "hidden" }}>
+                            <Panel defaultSize={60} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                                <PacketTimeline
+                                    packets={recording?.packets ?? []}
+                                    currentMs={currentMs}
+                                    onSelect={setSelectedPacket}
+                                    selectedPacket={selectedPacket}
+                                />
+                            </Panel>
+                            <Separator style={{ height: "4px", cursor: "row-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+                            <Panel defaultSize={40} minSize={10} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                                <JsonDetail packet={selectedPacket} />
+                            </Panel>
+                        </Group>
+                    ) : (
+                        <Box flex={1} overflow="hidden" display="flex" flexDirection="column">
+                            <MappingAssistant recording={recording} />
+                        </Box>
+                    )}
                 </Panel>
             </Group>
         </Flex>

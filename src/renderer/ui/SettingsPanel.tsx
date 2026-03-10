@@ -29,14 +29,28 @@ type ClickMode = "copy" | "travel";
 type WindowInfo = { handle: number; title: string };
 
 const MAPPING_HELP: Record<keyof ConfigStore["mappings"], string> = {
-    CurrentMapMessage:
+    MapCurrentEvent:
         "The obfuscated packet type name emitted by the server when the character changes map. Example: \"isj\".",
-    "CurrentMapMessage.mapId":
+    "MapCurrentEvent.mapId":
         "The field key inside that packet's JSON data that contains the map ID. Example: \"mapId\" or \"a\".",
-    QuestFinishedMessage:
+    QuestValidatedEvent:
         "The obfuscated packet type name emitted by the server when a quest is completed. Used to auto-advance guide progress.",
-    "QuestFinishedMessage.questId":
+    "QuestValidatedEvent.questId":
         "The field key inside that packet's JSON data that contains the quest ID.",
+    InteractiveUsedEvent:
+        "The obfuscated packet type name emitted when a character starts harvesting a resource. Supports dot-paths for nested fields, e.g. \"fexe.fnjq\".",
+    "InteractiveUsedEvent.resourceId":
+        "Dot-path to the resource type ID inside the packet (e.g. \"fexe.fnjq\").",
+    "InteractiveUsedEvent.skillId":
+        "Dot-path to the skill ID inside the packet (e.g. \"fexe.fnjr\").",
+    "InteractiveUsedEvent.elementId":
+        "Dot-path to the interactive element ID on the map inside the packet (e.g. \"fexe.fnjt\").",
+    InteractiveUseEndedEvent:
+        "The obfuscated packet type name emitted when a resource harvest completes (resource disappears).",
+    "InteractiveUseEndedEvent.elementId":
+        "Field key for the interactive element ID that finished being harvested (int32).",
+    "InteractiveUseEndedEvent.skillId":
+        "Field key for the skill ID used (int32).",
 };
 
 export const SettingsPanel = () => {

@@ -7,8 +7,8 @@ import { configStore } from "../providers/store";
 interface LatestMappings {
     timestamp: string;
     mappings: {
-        CurrentMapMessage: string;
-        "CurrentMapMessage.mapId": string;
+        MapCurrentEvent: string;
+        "MapCurrentEvent.mapId": string;
     };
 }
 

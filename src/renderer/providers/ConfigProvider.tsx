@@ -7,17 +7,39 @@ import { gameStore } from "../game/game-store";
 export const useBaseUrl = () => useConfig().cdnBaseUrl;
 export const getBaseUrl = () => configStore.get().cdnBaseUrl;
 
+/** Migrate legacy mapping keys to current names, preserving values. */
+function migrateMappings(raw: Record<string, unknown>): Record<string, unknown> {
+    const migrations: Array<[string, string]> = [
+        ["CurrentMapMessage", "MapCurrentEvent"],
+        ["CurrentMapMessage.mapId", "MapCurrentEvent.mapId"],
+        ["QuestFinishedMessage", "QuestValidatedEvent"],
+        ["QuestFinishedMessage.questId", "QuestValidatedEvent.questId"],
+    ];
+    const result = { ...raw };
+    for (const [oldKey, newKey] of migrations) {
+        if (result[oldKey] != null && result[newKey] == null) {
+            result[newKey] = result[oldKey];
+        }
+        delete result[oldKey];
+    }
+    return result;
+}
+
 export const ConfigProvider = ({ children }: PropsWithChildren) => {
     const configQuery = useQuery({
         queryKey: ["config"],
         queryFn: async () => {
             const response = (await window.api.getConfig()) as Partial<ConfigStore>;
 
+            const migratedMappings = migrateMappings(
+                (response.mappings ?? {}) as Record<string, unknown>,
+            );
+
             configStore.set({
                 ...configStore.get(),
                 ...response,
                 cdnBaseUrl: response.cdnBaseUrl || import.meta.env.VITE_CDN_BASE_URL,
-                mappings: { ...configStore.get().mappings, ...response.mappings },
+                mappings: { ...configStore.get().mappings, ...migratedMappings },
             });
 
             if (response.selectedResourceIds?.length) {

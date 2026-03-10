@@ -5,10 +5,17 @@ import type { GuideProgress } from "../ui/guides/types";
 export const appStore = store<AppStore>({
     config: {
         mappings: {
-            CurrentMapMessage: null,
-            "CurrentMapMessage.mapId": null,
-            QuestFinishedMessage: null,
-            "QuestFinishedMessage.questId": null,
+            MapCurrentEvent: null,
+            "MapCurrentEvent.mapId": null,
+            QuestValidatedEvent: null,
+            "QuestValidatedEvent.questId": null,
+            InteractiveUsedEvent: null,
+            "InteractiveUsedEvent.resourceId": null,
+            "InteractiveUsedEvent.skillId": null,
+            "InteractiveUsedEvent.elementId": null,
+            InteractiveUseEndedEvent: null,
+            "InteractiveUseEndedEvent.elementId": null,
+            "InteractiveUseEndedEvent.skillId": null,
         },
         cdnBaseUrl: undefined,
     },
@@ -35,10 +42,17 @@ export const mapStore = appStore.select("map");
 
 export type ConfigStore = {
     mappings: {
-        CurrentMapMessage: string | null;
-        "CurrentMapMessage.mapId": string | null;
-        QuestFinishedMessage: string | null;
-        "QuestFinishedMessage.questId": string | null;
+        MapCurrentEvent: string | null;
+        "MapCurrentEvent.mapId": string | null;
+        QuestValidatedEvent: string | null;
+        "QuestValidatedEvent.questId": string | null;
+        InteractiveUsedEvent: string | null;
+        "InteractiveUsedEvent.resourceId": string | null;
+        "InteractiveUsedEvent.skillId": string | null;
+        "InteractiveUsedEvent.elementId": string | null;
+        InteractiveUseEndedEvent: string | null;
+        "InteractiveUseEndedEvent.elementId": string | null;
+        "InteractiveUseEndedEvent.skillId": string | null;
     };
     cdnBaseUrl?: string;
     selectedResourceIds?: number[];

@@ -157,8 +157,8 @@ export function GuidesPanel() {
 
     const hasLoaded = useRef(false);
 
-    const questFinishedPacket = mappings?.QuestFinishedMessage ?? null;
-    const questIdField = mappings?.["QuestFinishedMessage.questId"] ?? null;
+    const questFinishedPacket = mappings?.QuestValidatedEvent ?? null;
+    const questIdField = mappings?.["QuestValidatedEvent.questId"] ?? null;
 
     useDofusEvent(questFinishedPacket, (data: any) => {
         if (!questIdField) return;

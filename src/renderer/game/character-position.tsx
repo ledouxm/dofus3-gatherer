@@ -48,8 +48,8 @@ export const CharacterPosition = ({ meta }: { meta: WorldmapMeta }) => {
         },
     });
 
-    useDofusEvent(mappings.CurrentMapMessage, async (packet) => {
-        const mapId = Number(packet.data[mappings["CurrentMapMessage.mapId"]!]);
+    useDofusEvent(mappings.MapCurrentEvent, async (packet) => {
+        const mapId = Number(packet.data[mappings["MapCurrentEvent.mapId"]!]);
 
         const { coords, infos } = await getMapPositionMutation.mutateAsync(mapId);
 

@@ -526,25 +526,6 @@ app.whenReady().then(async () => {
 
     const templateMessage = proto.lookupType("TemplateMessage");
 
-    function addRaw(data: Record<string, any>, type: protobuf.Type): void {
-        const orderedFields = Object.values(type.fields).sort((a, b) => a.id - b.id);
-        for (const field of orderedFields) {
-            const value = data[field.name];
-            if (field.resolvedType instanceof protobuf.Type && value != null) {
-                if (field.repeated && Array.isArray(value)) {
-                    for (const item of value) {
-                        if (item && typeof item === "object") {
-                            addRaw(item, field.resolvedType);
-                        }
-                    }
-                } else if (typeof value === "object") {
-                    addRaw(value, field.resolvedType);
-                }
-            }
-        }
-        data._raw = orderedFields.map((f) => f.type);
-    }
-
     let serverReassemblyBuffer = Buffer.alloc(0);
 
     makeSniffer({
@@ -586,7 +567,7 @@ app.whenReady().then(async () => {
                             Buffer.from(anyData.value ?? "", "base64") as any as Uint8Array,
                         );
                         const data = decoded.toJSON() as Record<string, any>;
-                        addRaw(data, type);
+                        data._raw = Buffer.from(anyData.value ?? "", "base64").toString("hex");
                         const packetPayload = { typeName, data };
                         console.log(typeName);
                         BrowserWindow.getAllWindows().forEach((w) => {
