@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type PacketEntry = {
     typeName: string;
@@ -51,29 +51,34 @@ export const usePacketRecorder = () => {
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const isRecordingRef = useRef(false);
 
     const packetHandler = useCallback(
-        (_event: Electron.IpcRendererEvent, payload: { typeName: string; data: Record<string, unknown> }) => {
-            if (!startTimeRef.current) return;
+        (_event: Electron.IpcRendererEvent, payload: { typeName: string; data: unknown }) => {
+            if (!isRecordingRef.current) return;
             packetsRef.current.push({
                 typeName: payload.typeName,
-                data: payload.data,
+                data: payload.data as Record<string, unknown>,
                 relativeMs: Date.now() - startTimeRef.current,
             });
         },
         [],
     );
 
+    // Register once on mount, deregister on unmount — prevents listener accumulation
+    useEffect(() => {
+        window.api.onAnyServerPacket(packetHandler);
+        return () => { window.api.offAnyServerPacket(packetHandler); };
+    }, [packetHandler]);
+
     const start = useCallback(
         async (stream: MediaStream) => {
             packetsRef.current = [];
             chunksRef.current = [];
             startTimeRef.current = Date.now();
+            isRecordingRef.current = true;
             setDuration(0);
             setStatus("recording");
-
-            // Listen to all decoded packets
-            window.api.onAnyServerPacket(packetHandler);
 
             // Start screen recording
             const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp8" });
@@ -99,7 +104,7 @@ export const usePacketRecorder = () => {
             tickRef.current = null;
         }
 
-        window.api.offAnyServerPacket(packetHandler);
+        isRecordingRef.current = false;
         startTimeRef.current = 0;
 
         return new Promise((resolve) => {
@@ -126,9 +131,10 @@ export const usePacketRecorder = () => {
 
             recorder.stop();
         });
-    }, [packetHandler]);
+    }, []);
 
     const reset = useCallback(() => {
+        isRecordingRef.current = false;
         packetsRef.current = [];
         chunksRef.current = [];
         startTimeRef.current = 0;

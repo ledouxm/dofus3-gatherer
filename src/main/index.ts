@@ -15,6 +15,24 @@ import { env } from "./env-vars";
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+function snakeToCamel(obj: Record<string, unknown>): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj)) {
+        const camel = k.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+        out[camel] = v && typeof v === "object" && !Array.isArray(v) ? snakeToCamel(v as Record<string, unknown>) : v;
+    }
+    return out;
+}
+
+function isProtoDefault(v: unknown): boolean {
+    if (v === null || v === undefined) return true;
+    if (typeof v === "number" && v === 0) return true;
+    if (typeof v === "string" && v === "") return true;
+    if (typeof v === "boolean" && !v) return true;
+    if (Array.isArray(v) && v.length === 0) return true;
+    return false;
+}
+
 async function readMainConfig(configDir: string): Promise<any> {
     const configPath = path.join(configDir, "config.json");
     try {
@@ -539,21 +557,47 @@ app.whenReady().then(async () => {
         console.warn("[clean-proto] failed to load:", e);
     }
 
-    ipcMain.handle("decode-with-clean-proto", (_event, { fullTypeName, samples }: { fullTypeName: string; samples: Array<{ obfTypeName: string; hex: string }> }) => {
+    ipcMain.handle("decode-with-all-targets", (_event, { typeNames, samples }: { typeNames: string[]; samples: Array<{ obfTypeName: string; hex: string }> }) => {
         if (!cleanRoot) return [];
         return samples.flatMap(({ obfTypeName, hex }) => {
+            const rawBytes = Buffer.from(hex, "hex") as any as Uint8Array;
+
+            // Repack: decode with obfuscated schema, strip decoy zeros, renumber fields 1,2,3…
+            let bytesToDecode: Uint8Array = rawBytes;
             try {
-                const type = cleanRoot!.lookupType(fullTypeName);
-                const bytes = Buffer.from(hex, "hex") as any as Uint8Array;
-                const decoded = type.decode(bytes);
-                const cleanData = decoded.toJSON() as Record<string, unknown>;
-                // Filter out fully-default (all-zero/empty) results
-                const hasValues = Object.values(cleanData).some((v) => v !== 0 && v !== "" && v !== false && v !== null);
-                if (!hasValues) return [];
-                return [{ obfTypeName, cleanData }];
+                const obfType = proto.lookupType(obfTypeName);
+                const obfJson = obfType.decode(rawBytes).toJSON() as Record<string, unknown>;
+
+                const nonDefault = Object.entries(obfType.fields)
+                    .filter(([name]) => !isProtoDefault(obfJson[name]))
+                    .sort(([, a], [, b]) => a.id - b.id);
+
+                if (nonDefault.length > 0) {
+                    const tempType = new protobuf.Type("Repack");
+                    nonDefault.forEach(([name, field], idx) => {
+                        tempType.add(new protobuf.Field(name, idx + 1, field.type));
+                    });
+                    new protobuf.Root().add(tempType);
+
+                    const valueObj: Record<string, unknown> = {};
+                    for (const [name] of nonDefault) valueObj[name] = obfJson[name];
+                    bytesToDecode = tempType.encode(tempType.create(valueObj)).finish() as any as Uint8Array;
+                }
             } catch {
-                return [];
+                // obfuscated type not found or repack failed — fall back to raw bytes
             }
+
+            return typeNames.flatMap((fullTypeName) => {
+                try {
+                    const type = cleanRoot!.lookupType(fullTypeName);
+                    const rawData = type.decode(bytesToDecode).toJSON() as Record<string, unknown>;
+                    const hasValues = Object.values(rawData).some((v) => v !== 0 && v !== "" && v !== false && v !== null);
+                    if (!hasValues) return [];
+                    return [{ obfTypeName, fullTypeName, cleanData: snakeToCamel(rawData) }];
+                } catch {
+                    return [];
+                }
+            });
         });
     });
 

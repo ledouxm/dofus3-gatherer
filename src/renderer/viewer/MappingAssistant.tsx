@@ -53,30 +53,35 @@ async function analyzeRecording(recording: Recording): Promise<Record<string, An
         byType[entry.typeName].count++;
     }
 
+    // One IPC call: try every packet against every target type at once
+    const samples = Object.entries(byType)
+        .filter(([, { data }]) => typeof (data as any)._raw === "string" && (data as any)._raw !== "")
+        .map(([obfTypeName, { data }]) => ({ obfTypeName, hex: (data as any)._raw as string }));
+
+    // byTarget: fullTypeName → (obfTypeName → cleanData)
+    const byTarget = new Map<string, Map<string, Record<string, unknown>>>();
+    if (samples.length > 0) {
+        const decoded = await window.api.decodeWithAllTargets(
+            MAPPING_TARGETS.map((t) => t.protoFullName),
+            samples,
+        );
+        for (const { obfTypeName, fullTypeName, cleanData } of decoded) {
+            if (!byTarget.has(fullTypeName)) byTarget.set(fullTypeName, new Map());
+            byTarget.get(fullTypeName)!.set(obfTypeName, cleanData);
+        }
+    }
+
     const results: Record<string, AnalysisResult> = {};
 
     for (const target of MAPPING_TARGETS) {
-        // Collect all samples that have a valid _raw hex string
-        const samples = Object.entries(byType)
-            .filter(([, { data }]) => typeof (data as any)._raw === "string")
-            .map(([obfTypeName, { data }]) => ({ obfTypeName, hex: (data as any)._raw as string }));
-
-        // Ask main process to try proto decode for this target type
-        let protoMatches = new Map<string, Record<string, unknown>>();
-        if (samples.length > 0) {
-            const decoded = await window.api.decodeWithCleanProto(target.protoFullName, samples);
-            for (const { obfTypeName, cleanData } of decoded) {
-                protoMatches.set(obfTypeName, cleanData);
-            }
-        }
-
+        const protoMatches = byTarget.get(target.protoFullName) ?? new Map<string, Record<string, unknown>>();
         const candidates: CandidateEntry[] = [];
 
         for (const [typeName, { data, count }] of Object.entries(byType)) {
             const rawHex = typeof (data as any)._raw === "string" ? (data as any)._raw : null;
 
             if (rawHex) {
-                // Only include if proto decode succeeded
+                // Only include if proto decode succeeded for this target
                 const cleanData = protoMatches.get(typeName);
                 if (cleanData) candidates.push({ typeName, sampleData: data, count, cleanData });
             } else {

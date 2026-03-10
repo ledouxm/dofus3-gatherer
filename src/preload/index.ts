@@ -111,8 +111,8 @@ const api = {
     offInitStatus: (
         listener: (event: Electron.IpcRendererEvent, steps: { id: string; label: string; status: string; progress?: number }[]) => void,
     ) => ipcRenderer.off("init-status", listener),
-    decodeWithCleanProto: (fullTypeName: string, samples: Array<{ obfTypeName: string; hex: string }>): Promise<Array<{ obfTypeName: string; cleanData: Record<string, unknown> }>> =>
-        ipcRenderer.invoke("decode-with-clean-proto", { fullTypeName, samples }),
+    decodeWithAllTargets: (typeNames: string[], samples: Array<{ obfTypeName: string; hex: string }>): Promise<Array<{ obfTypeName: string; fullTypeName: string; cleanData: Record<string, unknown> }>> =>
+        ipcRenderer.invoke("decode-with-all-targets", { typeNames, samples }),
     getDofusVersion: (): Promise<string | null> => ipcRenderer.invoke("get-dofus-version"),
     getAdminToken: (): Promise<string | null> => ipcRenderer.invoke("get-admin-token"),
     getMappingsSyncResult: (): Promise<{ updated: boolean; mappings?: Record<string, string>; timestamp?: string }> =>
