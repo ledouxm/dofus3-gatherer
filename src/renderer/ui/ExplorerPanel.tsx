@@ -192,9 +192,9 @@ async function loadItemRecipe(itemId: number): Promise<RecipeResult> {
         .executeTakeFirst();
 
     const junctionRows = await db
-        .selectFrom("RecipeDataIngredientIdsJunction as j")
+        .selectFrom("RecipeData_ingredientIds_junction as j")
         .select(["j.target_id"])
-        .where("j.RecipeData_id", "=", Number(recipe.id))
+        .where(sql<SqlBool>`j.RecipeData_id = ${recipe.id}`)
         .execute();
 
     const ingredientIds = junctionRows
@@ -300,14 +300,11 @@ function ItemIcon({ iconId, size = 24 }: { iconId: number; size?: number }) {
         );
     }
     return (
-        <Box
-            as="img"
+        <img
             src={getItemIconUrl(iconId)}
-            w={`${size}px`}
-            h={`${size}px`}
-            objectFit="contain"
-            borderRadius="4px"
-            flexShrink={0}
+            width={size}
+            height={size}
+            style={{ objectFit: "contain", borderRadius: "4px", flexShrink: 0 }}
             onError={() => setErrored(true)}
         />
     );

@@ -590,9 +590,13 @@ app.whenReady().then(async () => {
                         const packetPayload = { typeName, data };
                         console.log(typeName);
                         BrowserWindow.getAllWindows().forEach((w) => {
-                            if (w.isDestroyed()) return;
-                            w.webContents.send("server-packet/" + typeName, packetPayload);
-                            w.webContents.send("server-packet-broadcast", packetPayload);
+                            if (w.isDestroyed() || w.webContents.isDestroyed()) return;
+                            try {
+                                w.webContents.send("server-packet/" + typeName, packetPayload);
+                                w.webContents.send("server-packet-broadcast", packetPayload);
+                            } catch {
+                                // Window may be closing
+                            }
                         });
                     }
                 } catch (e) {
