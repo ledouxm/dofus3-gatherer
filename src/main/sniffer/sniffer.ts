@@ -5,9 +5,11 @@ import { ipcMain } from "electron";
 export const makeSniffer = ({
     onClientPacket,
     onServerPacket,
+    onServerReset,
 }: {
     onClientPacket?: (data: string) => void;
     onServerPacket?: (data: string) => void;
+    onServerReset?: () => void;
 }) => {
     const serverC = new Cap();
     const clientC = new Cap();
@@ -48,18 +50,36 @@ export const makeSniffer = ({
             buffer: serverBuffer,
             PROTOCOL,
         });
-        if (!result || !result.str.length) return;
+        if (!result) return;
 
-        const { str, seqno, datalen } = result;
+        const { str, seqno, datalen, flags } = result;
+
+        if (flags.syn || flags.rst) {
+            serverNextSeqno = null;
+            onServerReset && onServerReset();
+            return;
+        }
+
+        if (!str.length) return;
+
+        let payloadStr = str;
         const seqnoEnd = (seqno + datalen) >>> 0;
 
         if (serverNextSeqno !== null) {
-            const delta = (seqnoEnd - serverNextSeqno) >>> 0;
-            if (delta === 0 || delta > 0x80000000) return; // retransmission or no new data
+            const seqDelta = (seqno - serverNextSeqno) >>> 0;
+            if (seqDelta > 0x80000000) {
+                // seqno < serverNextSeqno: retransmission or partial overlap
+                const skipBytes = (serverNextSeqno - seqno) >>> 0;
+                if (skipBytes >= datalen) return; // pure retransmission, no new data
+                // Partial overlap: trim already-seen bytes from the hex string
+                payloadStr = str.slice(skipBytes * 2); // hex: 2 chars per byte
+            }
+            // seqDelta === 0: normal in-order packet
+            // 0 < seqDelta < 0x80000000: gap/out-of-order, accept as-is
         }
         serverNextSeqno = seqnoEnd;
 
-        onServerPacket && onServerPacket(str);
+        onServerPacket && onServerPacket(payloadStr);
     });
 
     clientC.on("packet", () => {
@@ -80,7 +100,7 @@ const getTcpPayload = ({
     decoders,
     buffer,
     PROTOCOL,
-}: any): { str: string; seqno: number; datalen: number } | undefined => {
+}: any): { str: string; seqno: number; datalen: number; flags: Record<string, boolean> } | undefined => {
     if (linkType === "ETHERNET") {
         var ret = decoders.Ethernet(buffer);
 
@@ -95,10 +115,11 @@ const getTcpPayload = ({
 
                 const str = buffer.toString("hex", ret.offset, datalen + ret.offset);
 
-                return { str, seqno: ret.info.seqno, datalen };
+                return { str, seqno: ret.info.seqno, datalen, flags: ret.info.flags ?? {} };
             } else if (ret.info.protocol === PROTOCOL.IP.UDP) {
                 ret = decoders.UDP(buffer, ret.offset);
             } else console.log("Unsupported IPv4 protocol: " + PROTOCOL.IP[ret.info.protocol]);
         } else console.log("Unsupported Ethertype: " + PROTOCOL.ETHERNET[ret.info.type]);
     }
+    return undefined;
 };

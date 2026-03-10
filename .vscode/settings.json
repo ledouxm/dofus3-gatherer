@@ -20,5 +20,15 @@
         "**/out": true,
         "**/ganymede-app": true
     },
-    "typescript.preferences.includePackageJsonAutoImports": "off"
+    "typescript.preferences.includePackageJsonAutoImports": "off",
+    "workbench.colorCustomizations": {
+        "titleBar.activeBackground": "#4caf7d",
+        "titleBar.activeForeground": "#e8f8fa",
+        "titleBar.inactiveBackground": "#4caf7d",
+        "titleBar.inactiveForeground": "#e8f8fa",
+        "activityBar.background": "#4caf7d",
+        "activityBar.foreground": "#e8f8fa",
+        "statusBar.background": "#4caf7d",
+        "statusBar.foreground": "#e8f8fa"
+    }
 }

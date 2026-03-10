@@ -383,8 +383,17 @@ export function GuidesPanel() {
 
     const handleNavigateToGuide = useCallback(
         async (guideId: number, _stepIndex: number) => {
-            const entry = entries.find((e) => e.id === guideId);
-            if (!entry) return;
+            let entry = entries.find((e) => e.id === guideId);
+            if (!entry) {
+                if (!ganymedePath) return;
+                const guidesDir = deriveGuidesPath(ganymedePath);
+                const ok = await window.api.downloadGuideFromServer(guideId, guidesDir).catch(() => false);
+                if (!ok) return;
+                const loaded = await window.api.readGuidesFolder(guidesDir).catch(() => []);
+                setEntries(loaded as GuideEntry[]);
+                entry = (loaded as GuideEntry[]).find((e) => e.id === guideId);
+                if (!entry) return;
+            }
             const existing = openedTabs.find((t) => t.guideId === guideId);
             if (existing) {
                 setActiveTabId(guideId);
@@ -404,7 +413,7 @@ export function GuidesPanel() {
                 handleProgressChange(guideId, { currentStep: existingProgress.currentStep });
             }
         },
-        [entries, openedTabs, progresses, saveTabsToConfig, handleProgressChange],
+        [entries, openedTabs, progresses, ganymedePath, saveTabsToConfig, handleProgressChange],
     );
 
     const handleSwitchTab = useCallback(

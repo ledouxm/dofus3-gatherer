@@ -177,6 +177,8 @@ export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavig
                 // <img> — render, click to open external
                 if (el.name === "img") {
                     const src = el.attribs?.src ?? "";
+                    if (src.includes("ganymede-dofus.com/images/texteditor/guides.png")) return <></>;
+
                     const isExternal = src.startsWith("http");
                     return (
                         <Box
@@ -197,15 +199,18 @@ export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavig
                     const guideId = parseInt(el.attribs["guideid"] ?? "0", 10);
                     const stepNumber = parseInt(el.attribs["stepnumber"] ?? "1", 10);
                     const stepId = parseInt(el.attribs["stepid"] ?? "0", 10);
-                    const label = el.attribs["label"] ?? el.attribs["guidename"] ?? "Guide";
+                    const label = el.attribs["label"] || el.attribs["guidename"] || "Guide";
                     // stepId === 0 means "go to user's current step" → sentinel -1
                     const stepIndex = stepId === 0 ? -1 : stepNumber - 1;
+                    const childContent = domToReact(el.children as DOMNode[], opts);
                     return (
-                        <GuideStepLink
-                            key={`guide-step-${guideId}-${stepNumber}`}
-                            label={label}
-                            onClick={() => onNavigateToGuide?.(guideId, stepIndex)}
-                        />
+                        <Box as="span" key={`guide-step-${guideId}-${stepNumber}`}>
+                            {childContent}
+                            <GuideStepLink
+                                label={label}
+                                onClick={() => onNavigateToGuide?.(guideId, stepIndex)}
+                            />
+                        </Box>
                     );
                 }
 

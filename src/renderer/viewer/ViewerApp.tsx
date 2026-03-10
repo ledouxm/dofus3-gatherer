@@ -161,8 +161,21 @@ export const ViewerApp = () => {
 
 // ── JSON detail panel ─────────────────────────────────────────────────────────
 
+function stripRaw(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(stripRaw);
+    if (value !== null && typeof value === "object") {
+        return Object.fromEntries(
+            Object.entries(value as Record<string, unknown>)
+                .filter(([k]) => k !== "_raw")
+                .map(([k, v]) => [k, stripRaw(v)]),
+        );
+    }
+    return value;
+}
+
 const JsonDetail = ({ packet }: { packet: PacketEntry | null }) => {
     const [copied, setCopied] = useState(false);
+    const [showRaw, setShowRaw] = useState(false);
 
     if (!packet) {
         return (
@@ -172,7 +185,8 @@ const JsonDetail = ({ packet }: { packet: PacketEntry | null }) => {
         );
     }
 
-    const json = JSON.stringify(packet.data, null, 2);
+    const data = showRaw ? packet.data : stripRaw(packet.data);
+    const json = JSON.stringify(data, null, 2);
 
     const copy = () => {
         navigator.clipboard.writeText(json);
@@ -200,6 +214,23 @@ const JsonDetail = ({ packet }: { packet: PacketEntry | null }) => {
                     @ {formatMs(packet.relativeMs)}
                 </Box>
                 <Box flex={1} />
+                <Box
+                    as="button"
+                    fontSize="9px"
+                    fontFamily="mono"
+                    px="5px"
+                    py="2px"
+                    borderRadius="sm"
+                    border="1px solid"
+                    borderColor={showRaw ? "orange.500" : "whiteAlpha.200"}
+                    color={showRaw ? "orange.300" : "whiteAlpha.400"}
+                    bg={showRaw ? "rgba(237,137,54,0.12)" : "transparent"}
+                    _hover={{ borderColor: "orange.400", color: "orange.200" }}
+                    onClick={() => setShowRaw((v) => !v)}
+                    flexShrink={0}
+                >
+                    _raw
+                </Box>
                 <IconButton
                     aria-label="Copy JSON"
                     size="xs"

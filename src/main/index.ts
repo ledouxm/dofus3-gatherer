@@ -515,6 +515,9 @@ app.whenReady().then(async () => {
     let serverReassemblyBuffer = Buffer.alloc(0);
 
     makeSniffer({
+        onServerReset: () => {
+            serverReassemblyBuffer = Buffer.alloc(0);
+        },
         onServerPacket: (packet) => {
             serverReassemblyBuffer = Buffer.concat([
                 serverReassemblyBuffer,
