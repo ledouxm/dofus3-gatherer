@@ -9,11 +9,10 @@ import { useQuery } from "@tanstack/react-query";
 import {
     useBaseUrl,
     useConfig,
-    useMappings,
     useUpdateConfigMutation,
     getBaseUrl,
 } from "./providers/ConfigProvider";
-import { CenterOnCharacterButton, CharacterPosition, Test } from "./game/character-position";
+import { CenterOnCharacterButton, CharacterPosition } from "./game/character-position";
 import { HintFilterButton } from "./ui/HintCategoryButtons";
 import { ResourcePickerButton } from "./ui/ResourcePickerButton";
 import { type AppTab, TitleBar } from "./ui/TitleBar";
@@ -28,10 +27,9 @@ import { useUpdateCheck } from "./useUpdateCheck";
 import { useMappingsSync } from "./useMappingsSync";
 import { CoordDisplay } from "./dofus-map/dofus-map.Grid";
 import { AdminPanel } from "./ui/AdminPanel";
-import { AdminMapButton } from "./ui/AdminMapButton";
 import { useInteractiveEvents } from "./game/useInteractiveEvents";
-import { useDofusEvent } from "./useDofusEvent";
-import { useHarvestMapper } from "./hooks/useHarvestMapper";
+import { useHarvestLog } from "./hooks/useHarvestLog";
+import { HarvestPanel } from "./ui/HarvestPanel";
 
 export function App() {
     const baseUrl = useBaseUrl();
@@ -43,6 +41,7 @@ export function App() {
     const updateInfo = useUpdateCheck();
     const mappingsSynced = useMappingsSync();
     useInteractiveEvents();
+    useHarvestLog();
 
     const { data: adminToken = null } = useQuery({
         queryKey: ["admin-token"],
@@ -62,9 +61,6 @@ export function App() {
             }
         },
     });
-
-    const mapperEnabled = !!adminToken && !!(config?.harvestMapper?.enabled);
-    const { sessionCount } = useHarvestMapper(mapperEnabled);
 
     useEffect(() => {
         if (!config || hasRestoredTab.current) return;
@@ -175,7 +171,6 @@ export function App() {
                     <WorldMapPickerButton />
                     <HintFilterButton />
                     <CenterOnCharacterButton />
-                    {adminToken && <AdminMapButton token={adminToken} sessionCount={sessionCount} />}
                 </div>
             </div>
 
@@ -214,6 +209,18 @@ export function App() {
                 <ExplorerPanel />
             </div>
 
+            {/* Harvests tab */}
+            <div
+                style={{
+                    display: activeTab === "harvests" ? "flex" : "none",
+                    flex: 1,
+                    overflow: "hidden",
+                    flexDirection: "column",
+                }}
+            >
+                <HarvestPanel />
+            </div>
+
             {/* Admin tab */}
             {adminToken && (
                 <div
@@ -223,7 +230,7 @@ export function App() {
                         overflow: "hidden",
                     }}
                 >
-                    <AdminPanel token={adminToken} sessionCount={sessionCount} />
+                    <AdminPanel token={adminToken} />
                 </div>
             )}
         </div>

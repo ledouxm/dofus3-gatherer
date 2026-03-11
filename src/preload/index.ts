@@ -5,6 +5,12 @@ import path from "node:path";
 import fs from "fs/promises";
 
 const configFolder = path.join(process.env.USER_DATA_PATH!, "config");
+const harvestLogPath = path.join(configFolder, "harvest-log.jsonl");
+
+// Stable listener registry: fixes contextBridge re-wrapping renderer functions on each call,
+// which prevents ipcRenderer.off from ever matching what ipcRenderer.on registered.
+const _listenerRegistry = new Map<number, { channel: string; wrapper: (e: Electron.IpcRendererEvent, ...a: any[]) => void }>();
+let _nextListenerId = 0;
 
 if (!configFolder) {
     throw new Error("Config folder path is not defined");
@@ -55,6 +61,28 @@ const api = {
             throw error;
         }
     },
+    appendHarvestEntry: async (entry: {
+        resourceId: number;
+        quantity: number;
+        mapId: number | null;
+        timestamp: string;
+    }): Promise<void> => {
+        await fs.mkdir(configFolder, { recursive: true }).catch(() => {});
+        await fs.appendFile(harvestLogPath, JSON.stringify(entry) + "\n", "utf-8");
+    },
+    readHarvestLog: async (): Promise<Array<{
+        resourceId: number;
+        quantity: number;
+        mapId: number | null;
+        timestamp: string;
+    }>> => {
+        try {
+            const raw = await fs.readFile(harvestLogPath, "utf-8");
+            return raw.split("\n").filter(Boolean).map((line) => JSON.parse(line));
+        } catch {
+            return [];
+        }
+    },
     getAppVersion: (): Promise<string> => ipcRenderer.invoke("get-app-version"),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke("open-external", url),
     openUserDataFolder: (): Promise<void> => ipcRenderer.invoke("open-user-data-folder"),
@@ -71,6 +99,22 @@ const api = {
         ipcRenderer.once(channel, listener),
     off: (channel: string, listener: (event: Electron.IpcRendererEvent, ...args: any[]) => void) =>
         ipcRenderer.off(channel, listener),
+    // ID-based listener registration: avoids contextBridge re-wrapping the renderer function
+    // on each call, which makes ipcRenderer.off unable to match what ipcRenderer.on registered.
+    addListener: (channel: string, listener: (event: Electron.IpcRendererEvent, ...args: any[]) => void): number => {
+        const id = _nextListenerId++;
+        const wrapper = (event: Electron.IpcRendererEvent, ...args: any[]) => listener(event, ...args);
+        _listenerRegistry.set(id, { channel, wrapper });
+        ipcRenderer.on(channel, wrapper);
+        return id;
+    },
+    removeListener: (id: number): void => {
+        const entry = _listenerRegistry.get(id);
+        if (entry) {
+            ipcRenderer.off(entry.channel, entry.wrapper);
+            _listenerRegistry.delete(id);
+        }
+    },
     // Packet Viewer APIs
     exportRecording: (data: { packets: unknown[]; videoBase64: string | null }): Promise<boolean> =>
         ipcRenderer.invoke("export-recording", data),

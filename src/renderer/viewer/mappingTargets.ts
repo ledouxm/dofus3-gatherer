@@ -64,7 +64,18 @@ export const MAPPING_TARGETS: MappingTarget[] = [
         protoFullName: "",
         fields: [
             { configKey: "resourceId", cleanFieldName: "objectGid", type: "number" },
-            { configKey: "elementId", cleanFieldName: "elementId", type: "number" },
+            { configKey: "quantity", cleanFieldName: "quantity", type: "number" },
+        ],
+    },
+    {
+        id: "ObjectHarvestedWithBonusEvent",
+        label: "Object Harvested With Bonus Event",
+        action: "Harvest a resource that grants bonus quantity (wait for the item to appear in your bag)",
+        protoFullName: "",
+        fields: [
+            { configKey: "resourceId", cleanFieldName: "objectGid", type: "number" },
+            { configKey: "quantity", cleanFieldName: "quantity", type: "number" },
+            { configKey: "bonusQuantity", cleanFieldName: "bonusQuantity", type: "number" },
         ],
     },
 ];

@@ -18,7 +18,11 @@ export const appStore = store<AppStore>({
             "InteractiveUseEndedEvent.skillId": null,
             ObjetHarvestedEvent: null,
             "ObjetHarvestedEvent.resourceId": null,
-            "ObjetHarvestedEvent.elementId": null,
+            "ObjetHarvestedEvent.quantity": null,
+            ObjectHarvestedWithBonusEvent: null,
+            "ObjectHarvestedWithBonusEvent.resourceId": null,
+            "ObjectHarvestedWithBonusEvent.quantity": null,
+            "ObjectHarvestedWithBonusEvent.bonusQuantity": null,
         },
         cdnBaseUrl: undefined,
     },
@@ -36,8 +40,6 @@ export const appStore = store<AppStore>({
         travelHandle: null,
         highlightedResourceIds: [] as number[],
         hoveredHintName: null,
-        showHarvestedResources: false,
-        harvestedResourceIds: [] as number[],
     },
 });
 
@@ -60,10 +62,13 @@ export type ConfigStore = {
         "InteractiveUseEndedEvent.skillId": string | null;
         ObjetHarvestedEvent: string | null;
         "ObjetHarvestedEvent.resourceId": string | null;
-        "ObjetHarvestedEvent.elementId": string | null;
+        "ObjetHarvestedEvent.quantity": string | null;
+        ObjectHarvestedWithBonusEvent: string | null;
+        "ObjectHarvestedWithBonusEvent.resourceId": string | null;
+        "ObjectHarvestedWithBonusEvent.quantity": string | null;
+        "ObjectHarvestedWithBonusEvent.bonusQuantity": string | null;
     };
     cdnBaseUrl?: string;
-    harvestMapper?: { enabled: boolean; showHarvested: boolean };
     selectedResourceIds?: number[];
     centerOnCharacter?: boolean;
     copyCoordinatesOnClick?: boolean;
@@ -116,7 +121,5 @@ export type AppStore = {
         travelHandle: number | null;
         highlightedResourceIds: number[];
         hoveredHintName: string | null;
-        showHarvestedResources: boolean;
-        harvestedResourceIds: number[];
     };
 };

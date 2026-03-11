@@ -1,7 +1,7 @@
-import { Box, Button, Flex, Heading, Input, Stack, Switch, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, Input, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { LuFolder, LuLeaf, LuUpload } from "react-icons/lu";
-import { getBaseUrl, useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
+import { LuUpload } from "react-icons/lu";
+import { getBaseUrl } from "../providers/ConfigProvider";
 import { configStore } from "../providers/store";
 
 interface LatestMappings {
@@ -12,12 +12,8 @@ interface LatestMappings {
     };
 }
 
-export const AdminPanel = ({ token, sessionCount }: { token: string; sessionCount: number }) => {
+export const AdminPanel = ({ token }: { token: string }) => {
     const [version, setVersion] = useState("");
-    const config = useConfig();
-    const updateConfig = useUpdateConfigMutation();
-    const mapperEnabled = config?.harvestMapper?.enabled ?? false;
-    const mappings = useMappings();
 
     useEffect(() => {
         window.api.getDofusVersion().then((v) => { if (v) setVersion(v); });
@@ -123,67 +119,6 @@ export const AdminPanel = ({ token, sessionCount }: { token: string; sessionCoun
                                 fontFamily="mono"
                             >
                                 {status.message}
-                            </Text>
-                        )}
-                    </Stack>
-                </Box>
-
-                <Box
-                    bg="gray.900"
-                    border="1px solid"
-                    borderColor="whiteAlpha.200"
-                    borderRadius="lg"
-                    p={8}
-                    w="100%"
-                >
-                    <Stack gap={4}>
-                        <Flex align="center" justify="space-between">
-                            <Heading size="md" color="whiteAlpha.900" display="flex" alignItems="center" gap={2}>
-                                <LuLeaf />
-                                Harvest Mapper
-                            </Heading>
-                            <Button
-                                size="xs"
-                                variant="ghost"
-                                color="whiteAlpha.500"
-                                onClick={() => window.api.openUserDataFolder()}
-                                gap={1}
-                            >
-                                <LuFolder size={12} />
-                                Open folder
-                            </Button>
-                        </Flex>
-
-                        <Text fontSize="sm" color="whiteAlpha.600">
-                            Automatically records <Text as="span" fontFamily="mono">elementId → resourceId</Text> by
-                            correlating <Text as="span" fontFamily="mono">InteractiveUsedEvent</Text> with the next{" "}
-                            <Text as="span" fontFamily="mono">ObjetHarvestedEvent</Text> within 5 seconds.
-                            Saved to <Text as="span" fontFamily="mono">element-resource-mappings.json</Text>.
-                        </Text>
-
-                        <Flex align="center" gap={3}>
-                            <Switch.Root
-                                checked={mapperEnabled}
-                                onCheckedChange={(e) => updateConfig.mutate({ harvestMapper: { enabled: e.checked, showHarvested: config?.harvestMapper?.showHarvested ?? false } })}
-                                colorPalette="yellow"
-                            >
-                                <Switch.HiddenInput />
-                                <Switch.Control />
-                                <Switch.Label fontSize="sm" color="whiteAlpha.800">
-                                    {mapperEnabled ? "Active" : "Inactive"}
-                                </Switch.Label>
-                            </Switch.Root>
-                        </Flex>
-
-                        {!mappings.ObjetHarvestedEvent && (
-                            <Text fontSize="sm" color="orange.400">
-                                ObjetHarvestedEvent is not configured — use the Mapping Assistant to set it up.
-                            </Text>
-                        )}
-
-                        {sessionCount > 0 && (
-                            <Text fontSize="sm" color="green.400" fontFamily="mono">
-                                {sessionCount} {sessionCount === 1 ? "entry" : "entries"} saved this session.
                             </Text>
                         )}
                     </Stack>

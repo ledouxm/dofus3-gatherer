@@ -2,13 +2,14 @@ import { Box, HStack, IconButton } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import { LuMinus, LuNavigation2, LuPin, LuSettings, LuX } from "react-icons/lu";
 
-export type AppTab = "map" | "viewer" | "admin" | "guides" | "explorer";
+export type AppTab = "map" | "viewer" | "admin" | "guides" | "explorer" | "harvests";
 
 const BASE_TABS: { id: AppTab; label: string }[] = [
     { id: "map", label: "MAP" },
     { id: "viewer", label: "VIEWER" },
     { id: "guides", label: "GUIDES" },
     { id: "explorer", label: "EXPLORER" },
+    { id: "harvests", label: "HARVESTS" },
 ];
 
 const ACTIVE_COLOR = "#d4f000";

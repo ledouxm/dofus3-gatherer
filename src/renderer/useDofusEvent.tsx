@@ -6,12 +6,14 @@ export const useDofusEvent = (eventName: string | null, callback: (data: any) =>
 
     useEffect(() => {
         if (!eventName) return;
-        const handler = (_event: Electron.IpcRendererEvent, data: any) => {
-            callbackRef.current(data);
-        };
-        window.api.on("server-packet/" + eventName, handler);
+        const id = window.api.addListener(
+            "server-packet/" + eventName,
+            (_event: Electron.IpcRendererEvent, data: any) => {
+                callbackRef.current(data);
+            },
+        );
         return () => {
-            window.api.off("server-packet/" + eventName, handler);
+            window.api.removeListener(id);
         };
     }, [eventName]);
 };
