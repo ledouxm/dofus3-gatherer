@@ -9,22 +9,21 @@ import { useMemo } from "react";
 import { db } from "../db";
 import { HoverCellLayer } from "./HoverCellLayer";
 
-const aggregateByPosition = (recoltables: Recoltable[], resId: number, multiPos: Set<string>) => {
+const aggregateByPosition = (recoltables: Recoltable[], multiPos: Set<string>) => {
     const posMap = new Map<
         string,
         { posX: number; posY: number; count: number; hasMore: boolean }
     >();
     for (const r of recoltables) {
-        const key = `${r.pos.posX},${r.pos.posY}`;
-        const qty = r.quantities.find((q) => q.item === resId)?.quantity ?? 1;
+        const key = `${r.posX},${r.posY}`;
         const existing = posMap.get(key);
         if (existing) {
-            existing.count += qty;
+            existing.count += r.quantity;
         } else {
             posMap.set(key, {
-                posX: r.pos.posX,
-                posY: r.pos.posY,
-                count: qty,
+                posX: r.posX,
+                posY: r.posY,
+                count: r.quantity,
                 hasMore: multiPos.has(key),
             });
         }
@@ -56,33 +55,30 @@ export const RecoltablesLayer = ({ meta }: Props) => {
 
     const queries = useQueries({
         queries: selectedResourceIds.map((id) => ({
-            queryKey: ["recoltables", id],
+            queryKey: ["recoltables2", id],
             queryFn: () => getRecoltables([String(id)]) as Promise<Recoltable[]>,
         })),
     });
 
-    const seen = new Set<string>();
+    const seen = new Set<number>();
     const recoltables = queries
         .flatMap((q) => q.data ?? [])
         .filter((recoltable) => {
             if (seen.has(recoltable.id)) return false;
             if (
                 selectedWorldmapId !== null &&
-                recoltable.pos.worldMap !== Number(selectedWorldmapId)
+                recoltable.worldMap !== Number(selectedWorldmapId)
             )
                 return false;
-            seen.add(recoltable._id);
-            return recoltable.resources.some((res) => selectedResourceIds.includes(res));
+            seen.add(recoltable.id);
+            return selectedResourceIds.includes(recoltable.resourceId);
         });
 
     const groupedByResource = recoltables.reduce(
         (acc, r) => {
-            r.resources.forEach((res) => {
-                if (!selectedResourceIds.includes(res)) return;
-                if (!acc[res]) acc[res] = [];
-
-                acc[res].push(r);
-            });
+            if (!selectedResourceIds.includes(r.resourceId)) return acc;
+            if (!acc[r.resourceId]) acc[r.resourceId] = [];
+            acc[r.resourceId].push(r);
             return acc;
         },
         {} as Record<number, Recoltable[]>,
@@ -101,7 +97,7 @@ export const RecoltablesLayer = ({ meta }: Props) => {
         for (const recs of Object.values(groupedByResource)) {
             const seen = new Set<string>();
             for (const r of recs) {
-                const key = `${r.pos.posX},${r.pos.posY}`;
+                const key = `${r.posX},${r.posY}`;
                 if (!seen.has(key)) {
                     seen.add(key);
                     posCount.set(key, (posCount.get(key) ?? 0) + 1);
@@ -120,7 +116,7 @@ export const RecoltablesLayer = ({ meta }: Props) => {
                     spriteUrl: getItemIconUrl(
                         iconsQueries.find((q) => q.data?.id === Number(resId))?.data?.iconId ?? 0,
                     ),
-                    coords: aggregateByPosition(recoltables, Number(resId), multiResourcePositions),
+                    coords: aggregateByPosition(recoltables, multiResourcePositions),
                     spriteSize: (zoom) =>
                         Math.max(6, meta.mapWidth * Math.pow(2, zoom - meta.z_max) * 1.2),
                     highlighted: highlightedResourceIds.includes(Number(resId)),

@@ -76,7 +76,7 @@ async function fetchRecoltable(cdnBaseUrl: string, resource: string): Promise<an
 }
 
 async function getCachedRecoltables(cacheDir: string, resourceId: string): Promise<any[] | null> {
-    const cachePath = path.join(cacheDir, `recoltables-${resourceId}.json`);
+    const cachePath = path.join(cacheDir, `recoltables2-${resourceId}.json`);
     try {
         const raw = await fs.readFile(cachePath, "utf-8");
         const { timestamp, data } = JSON.parse(raw);
@@ -90,7 +90,7 @@ async function setCachedRecoltables(
     resourceId: string,
     data: any[],
 ): Promise<void> {
-    const cachePath = path.join(cacheDir, `recoltables-${resourceId}.json`);
+    const cachePath = path.join(cacheDir, `recoltables2-${resourceId}.json`);
     await fs.writeFile(cachePath, JSON.stringify({ timestamp: Date.now(), data }), "utf-8");
 }
 function createTravelWindow(): BrowserWindow {

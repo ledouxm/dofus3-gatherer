@@ -59,11 +59,9 @@ export function HoverCellLayer({ meta, recoltables, iconsByResourceId }: Props) 
     const resourceQuantities = new Map<number, number>();
     if (hoveredCoord) {
         for (const r of recoltables) {
-            if (r.pos.posX !== hoveredCoord.posX || r.pos.posY !== hoveredCoord.posY) continue;
-            for (const q of r.quantities) {
-                if (!iconsByResourceId.has(q.item)) continue;
-                resourceQuantities.set(q.item, (resourceQuantities.get(q.item) ?? 0) + q.quantity);
-            }
+            if (r.posX !== hoveredCoord.posX || r.posY !== hoveredCoord.posY) continue;
+            if (!iconsByResourceId.has(r.resourceId)) continue;
+            resourceQuantities.set(r.resourceId, (resourceQuantities.get(r.resourceId) ?? 0) + r.quantity);
         }
     }
 
