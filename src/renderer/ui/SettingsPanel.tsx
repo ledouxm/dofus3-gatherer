@@ -34,23 +34,20 @@ const MAPPING_HELP: Record<keyof ConfigStore["mappings"], string> = {
         'The obfuscated packet type name emitted by the server when the character changes map. Example: "isj".',
     "MapCurrentEvent.mapId":
         'The field key inside that packet\'s JSON data that contains the map ID. Example: "mapId" or "a".',
-    QuestValidatedEvent:
-        "The obfuscated packet type name emitted by the server when a quest is completed. Used to auto-advance guide progress.",
-    "QuestValidatedEvent.questId":
-        "The field key inside that packet's JSON data that contains the quest ID.",
-    InteractiveUsedEvent:
-        'The obfuscated packet type name emitted when a character starts harvesting a resource. Supports dot-paths for nested fields, e.g. "fexe.fnjq".',
-    "InteractiveUsedEvent.resourceId":
-        'Dot-path to the resource type ID inside the packet (e.g. "fexe.fnjq").',
-    "InteractiveUsedEvent.skillId":
-        'Dot-path to the skill ID inside the packet (e.g. "fexe.fnjr").',
-    "InteractiveUsedEvent.elementId":
-        'Dot-path to the interactive element ID on the map inside the packet (e.g. "fexe.fnjt").',
-    InteractiveUseEndedEvent:
-        "The obfuscated packet type name emitted when a resource harvest completes (resource disappears).",
-    "InteractiveUseEndedEvent.elementId":
-        "Field key for the interactive element ID that finished being harvested (int32).",
-    "InteractiveUseEndedEvent.skillId": "Field key for the skill ID used (int32).",
+    "ObjectHarvestedWithBonusEvent.bonusQuantity":
+        'The field key inside the "ObjectHarvestedWithBonusEvent" packet\'s JSON data that contains the bonus quantity harvested (if any). Example: "bonusQty" or "d".',
+    "ObjectHarvestedWithBonusEvent.quantity":
+        'The field key inside the "ObjectHarvestedWithBonusEvent" packet\'s JSON data that contains the quantity harvested. Example: "qty" or "c".',
+    "ObjectHarvestedWithBonusEvent.resourceId":
+        'The field key inside the "ObjectHarvestedWithBonusEvent" packet\'s JSON data that contains the harvested resource ID. Example: "resId" or "b".',
+    ObjetHarvestedEvent:
+        'The obfuscated packet type name emitted by the server when the character harvests a resource. Example: "isf".',
+    "ObjetHarvestedEvent.quantity":
+        'The field key inside that packet\'s JSON data that contains the quantity harvested. Example: "qty" or "c".',
+    "ObjetHarvestedEvent.resourceId":
+        'The field key inside that packet\'s JSON data that contains the harvested resource ID. Example: "resId" or "b".',
+    ObjectHarvestedWithBonusEvent:
+        'The obfuscated packet type name emitted by the server when the character harvests a resource with a bonus (e.g. from a profession buff). Example: "isg".',
 };
 
 export const SettingsPanel = () => {

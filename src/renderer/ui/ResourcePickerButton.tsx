@@ -23,7 +23,11 @@ const POPOVER_WIDTH = GRID_WIDTH + POPOVER_PADDING * 2 + SCROLLBAR_WIDTH;
 
 const setSelectedIds = (newIds: number[]) => {
     const highlighted = mapStore.get().highlightedResourceIds.filter((id) => newIds.includes(id));
-    mapStore.set((v) => ({ ...v, selectedResourceIds: newIds, highlightedResourceIds: highlighted }));
+    mapStore.set((v) => ({
+        ...v,
+        selectedResourceIds: newIds,
+        highlightedResourceIds: highlighted,
+    }));
     window.api.saveConfig({ selectedResourceIds: newIds, highlightedResourceIds: highlighted });
 };
 
@@ -62,6 +66,7 @@ export const ResourcePickerButton = () => {
     const [iconSearch, setIconSearch] = useState("");
     const [selectedIconItemId, setSelectedIconItemId] = useState<number | null>(null);
 
+    console.log(resources);
     if (!resources) return null;
 
     const jobGroups = groupResourcesByJob(resources);
@@ -69,9 +74,12 @@ export const ResourcePickerButton = () => {
     const extraCount = selectedResourceIds.length > 1 ? selectedResourceIds.length - 1 : 0;
     const presets = config.resourcePresets ?? [];
 
-    const iconSearchResults = iconSearch.trim().length >= 2
-        ? resources.filter((r) => r.itemName.toLowerCase().includes(iconSearch.toLowerCase())).slice(0, 8)
-        : [];
+    const iconSearchResults =
+        iconSearch.trim().length >= 2
+            ? resources
+                  .filter((r) => r.itemName.toLowerCase().includes(iconSearch.toLowerCase()))
+                  .slice(0, 8)
+            : [];
 
     const isPresetActive = (resourceIds: number[]) => {
         const a = [...resourceIds].sort().join(",");
@@ -126,7 +134,10 @@ export const ResourcePickerButton = () => {
                             alt="selected resource"
                             width={28}
                             height={28}
-                            style={{ filter: buttonIcon.grayscale ? "grayscale(1)" : "none", objectFit: "contain" }}
+                            style={{
+                                filter: buttonIcon.grayscale ? "grayscale(1)" : "none",
+                                objectFit: "contain",
+                            }}
                         />
                     </IconButton>
                 </Popover.Trigger>
@@ -158,7 +169,13 @@ export const ResourcePickerButton = () => {
                     {/* ── Presets ── */}
                     <Box mb={2}>
                         <HStack mb={1} gap={1} justify="space-between">
-                            <Text fontSize="xs" fontWeight="semibold" color="whiteAlpha.500" textTransform="uppercase" letterSpacing="wide">
+                            <Text
+                                fontSize="xs"
+                                fontWeight="semibold"
+                                color="whiteAlpha.500"
+                                textTransform="uppercase"
+                                letterSpacing="wide"
+                            >
                                 Presets
                             </Text>
                             {!showNewPreset && (
@@ -190,12 +207,20 @@ export const ResourcePickerButton = () => {
                                             py="3px"
                                             borderRadius="full"
                                             border={`1px solid ${active ? "rgba(212,240,0,0.6)" : "rgba(255,255,255,0.15)"}`}
-                                            bg={active ? "rgba(212,240,0,0.1)" : "rgba(255,255,255,0.05)"}
+                                            bg={
+                                                active
+                                                    ? "rgba(212,240,0,0.1)"
+                                                    : "rgba(255,255,255,0.05)"
+                                            }
                                             color={active ? "#d4f000" : "rgba(255,255,255,0.7)"}
                                             fontSize="10px"
                                             fontWeight="600"
                                             cursor="pointer"
-                                            _hover={{ borderColor: active ? "rgba(212,240,0,0.8)" : "rgba(255,255,255,0.3)" }}
+                                            _hover={{
+                                                borderColor: active
+                                                    ? "rgba(212,240,0,0.8)"
+                                                    : "rgba(255,255,255,0.3)",
+                                            }}
                                             onClick={() => setSelectedIds(preset.resourceIds)}
                                         >
                                             <img
@@ -212,7 +237,10 @@ export const ResourcePickerButton = () => {
                                                 color="rgba(255,255,255,0.35)"
                                                 _hover={{ color: "red.300" }}
                                                 ml="2px"
-                                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); deletePreset(preset.id); }}
+                                                onClick={(e: React.MouseEvent) => {
+                                                    e.stopPropagation();
+                                                    deletePreset(preset.id);
+                                                }}
                                             >
                                                 <LuX size={9} />
                                             </Box>
@@ -229,21 +257,65 @@ export const ResourcePickerButton = () => {
                         )}
 
                         {showNewPreset && (
-                            <Box mt={1} p={2} borderRadius="md" border="1px solid rgba(255,255,255,0.1)" bg="rgba(255,255,255,0.03)">
+                            <Box
+                                mt={1}
+                                p={2}
+                                borderRadius="md"
+                                border="1px solid rgba(255,255,255,0.1)"
+                                bg="rgba(255,255,255,0.03)"
+                            >
                                 <input
                                     autoFocus
                                     placeholder="Preset name"
                                     value={presetName}
                                     onChange={(e) => setPresetName(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === "Enter") savePreset(); if (e.key === "Escape") { setShowNewPreset(false); setPresetName(""); setIconSearch(""); setSelectedIconItemId(null); } }}
-                                    style={{ width: "100%", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4, color: "#fff", fontSize: 11, padding: "3px 6px", outline: "none", marginBottom: 6, boxSizing: "border-box" }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") savePreset();
+                                        if (e.key === "Escape") {
+                                            setShowNewPreset(false);
+                                            setPresetName("");
+                                            setIconSearch("");
+                                            setSelectedIconItemId(null);
+                                        }
+                                    }}
+                                    style={{
+                                        width: "100%",
+                                        background: "rgba(255,255,255,0.07)",
+                                        border: "1px solid rgba(255,255,255,0.15)",
+                                        borderRadius: 4,
+                                        color: "#fff",
+                                        fontSize: 11,
+                                        padding: "3px 6px",
+                                        outline: "none",
+                                        marginBottom: 6,
+                                        boxSizing: "border-box",
+                                    }}
                                 />
-                                <Text fontSize="9px" color="whiteAlpha.400" mb={1} textTransform="uppercase" letterSpacing="wide">Icon</Text>
+                                <Text
+                                    fontSize="9px"
+                                    color="whiteAlpha.400"
+                                    mb={1}
+                                    textTransform="uppercase"
+                                    letterSpacing="wide"
+                                >
+                                    Icon
+                                </Text>
                                 <input
                                     placeholder="Search item…"
                                     value={iconSearch}
                                     onChange={(e) => setIconSearch(e.target.value)}
-                                    style={{ width: "100%", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 4, color: "#fff", fontSize: 11, padding: "3px 6px", outline: "none", marginBottom: 4, boxSizing: "border-box" }}
+                                    style={{
+                                        width: "100%",
+                                        background: "rgba(255,255,255,0.07)",
+                                        border: "1px solid rgba(255,255,255,0.15)",
+                                        borderRadius: 4,
+                                        color: "#fff",
+                                        fontSize: 11,
+                                        padding: "3px 6px",
+                                        outline: "none",
+                                        marginBottom: 4,
+                                        boxSizing: "border-box",
+                                    }}
                                 />
                                 {iconSearchResults.length > 0 && (
                                     <Box display="flex" flexWrap="wrap" gap="3px" mb={1}>
@@ -252,15 +324,27 @@ export const ResourcePickerButton = () => {
                                                 key={r.itemId}
                                                 as="button"
                                                 title={r.itemName}
-                                                onClick={() => { setSelectedIconItemId(r.itemIconId); setIconSearch(r.itemName); }}
+                                                onClick={() => {
+                                                    setSelectedIconItemId(r.itemIconId);
+                                                    setIconSearch(r.itemName);
+                                                }}
                                                 p="2px"
                                                 borderRadius="sm"
                                                 border={`1px solid ${selectedIconItemId === r.itemIconId ? "rgba(212,240,0,0.6)" : "rgba(255,255,255,0.1)"}`}
-                                                bg={selectedIconItemId === r.itemIconId ? "rgba(212,240,0,0.1)" : "transparent"}
+                                                bg={
+                                                    selectedIconItemId === r.itemIconId
+                                                        ? "rgba(212,240,0,0.1)"
+                                                        : "transparent"
+                                                }
                                                 cursor="pointer"
                                                 _hover={{ borderColor: "rgba(255,255,255,0.3)" }}
                                             >
-                                                <img src={getItemIconUrl(r.itemIconId)} width={24} height={24} style={{ objectFit: "contain" }} />
+                                                <img
+                                                    src={getItemIconUrl(r.itemIconId)}
+                                                    width={24}
+                                                    height={24}
+                                                    style={{ objectFit: "contain" }}
+                                                />
                                             </Box>
                                         ))}
                                     </Box>
@@ -271,12 +355,24 @@ export const ResourcePickerButton = () => {
                                         flex={1}
                                         py="3px"
                                         borderRadius="sm"
-                                        bg={presetName.trim() && selectedIconItemId ? "rgba(212,240,0,0.12)" : "rgba(255,255,255,0.05)"}
-                                        color={presetName.trim() && selectedIconItemId ? "#d4f000" : "rgba(255,255,255,0.3)"}
+                                        bg={
+                                            presetName.trim() && selectedIconItemId
+                                                ? "rgba(212,240,0,0.12)"
+                                                : "rgba(255,255,255,0.05)"
+                                        }
+                                        color={
+                                            presetName.trim() && selectedIconItemId
+                                                ? "#d4f000"
+                                                : "rgba(255,255,255,0.3)"
+                                        }
                                         border={`1px solid ${presetName.trim() && selectedIconItemId ? "rgba(212,240,0,0.4)" : "rgba(255,255,255,0.1)"}`}
                                         fontSize="10px"
                                         fontWeight="600"
-                                        cursor={presetName.trim() && selectedIconItemId ? "pointer" : "not-allowed"}
+                                        cursor={
+                                            presetName.trim() && selectedIconItemId
+                                                ? "pointer"
+                                                : "not-allowed"
+                                        }
                                         onClick={savePreset}
                                     >
                                         Save
@@ -291,7 +387,12 @@ export const ResourcePickerButton = () => {
                                         border="1px solid rgba(255,255,255,0.1)"
                                         fontSize="10px"
                                         cursor="pointer"
-                                        onClick={() => { setShowNewPreset(false); setPresetName(""); setIconSearch(""); setSelectedIconItemId(null); }}
+                                        onClick={() => {
+                                            setShowNewPreset(false);
+                                            setPresetName("");
+                                            setIconSearch("");
+                                            setSelectedIconItemId(null);
+                                        }}
                                     >
                                         Cancel
                                     </Box>
@@ -305,7 +406,9 @@ export const ResourcePickerButton = () => {
                     {/* ── Resource grid ── */}
                     {jobGroups.map(([jobName, items]) => {
                         const groupItemIds = items.map((i) => i.itemId);
-                        const allSelected = groupItemIds.every((id) => selectedResourceIds.includes(id));
+                        const allSelected = groupItemIds.every((id) =>
+                            selectedResourceIds.includes(id),
+                        );
                         return (
                             <Box key={jobName} mb={2}>
                                 <HStack mb={1} gap={1}>
@@ -322,12 +425,19 @@ export const ResourcePickerButton = () => {
                                     <Tooltip.Root>
                                         <Tooltip.Trigger asChild>
                                             <IconButton
-                                                aria-label={allSelected ? "Deselect all" : "Select all"}
+                                                aria-label={
+                                                    allSelected ? "Deselect all" : "Select all"
+                                                }
                                                 size="2xs"
                                                 variant="ghost"
                                                 color="whiteAlpha.500"
                                                 _hover={{ color: "#d4f000" }}
-                                                onClick={() => toggleJobGroup(groupItemIds, selectedResourceIds)}
+                                                onClick={() =>
+                                                    toggleJobGroup(
+                                                        groupItemIds,
+                                                        selectedResourceIds,
+                                                    )
+                                                }
                                             >
                                                 {allSelected ? <LuMinus /> : <LuPlus />}
                                             </IconButton>
@@ -339,16 +449,30 @@ export const ResourcePickerButton = () => {
                                         </Tooltip.Positioner>
                                     </Tooltip.Root>
                                 </HStack>
-                                <Box display="flex" flexWrap="wrap" w={`${GRID_WIDTH}px`} style={{ gap: `${ITEM_GAP}px` }}>
+                                <Box
+                                    display="flex"
+                                    flexWrap="wrap"
+                                    w={`${GRID_WIDTH}px`}
+                                    style={{ gap: `${ITEM_GAP}px` }}
+                                >
                                     {items.map((item) => {
-                                        const isSelected = selectedResourceIds.includes(item.itemId);
-                                        const isHighlighted = isSelected && highlightedResourceIds.includes(item.itemId);
+                                        const isSelected = selectedResourceIds.includes(
+                                            item.itemId,
+                                        );
+                                        const isHighlighted =
+                                            isSelected &&
+                                            highlightedResourceIds.includes(item.itemId);
                                         return (
                                             <Tooltip.Root key={item.itemId}>
                                                 <Tooltip.Trigger asChild>
                                                     <Box
                                                         as="button"
-                                                        onClick={() => toggleResource(item.itemId, selectedResourceIds)}
+                                                        onClick={() =>
+                                                            toggleResource(
+                                                                item.itemId,
+                                                                selectedResourceIds,
+                                                            )
+                                                        }
                                                         borderRadius="sm"
                                                         w={`${ITEM_SIZE}px`}
                                                         h={`${ITEM_SIZE}px`}
@@ -358,8 +482,18 @@ export const ResourcePickerButton = () => {
                                                         p="2px"
                                                         cursor="pointer"
                                                         position="relative"
-                                                        bg={isHighlighted ? "rgba(212,240,0,0.15)" : isSelected ? "rgba(255,255,255,0.2)" : "transparent"}
-                                                        border={isHighlighted ? "1px solid rgba(212,240,0,0.5)" : "1px solid transparent"}
+                                                        bg={
+                                                            isHighlighted
+                                                                ? "rgba(212,240,0,0.15)"
+                                                                : isSelected
+                                                                  ? "rgba(255,255,255,0.2)"
+                                                                  : "transparent"
+                                                        }
+                                                        border={
+                                                            isHighlighted
+                                                                ? "1px solid rgba(212,240,0,0.5)"
+                                                                : "1px solid transparent"
+                                                        }
                                                         opacity={isSelected ? 1 : 0.35}
                                                         _hover={{ opacity: 1 }}
                                                         transition="all 0.1s"
@@ -382,12 +516,30 @@ export const ResourcePickerButton = () => {
                                                                 display="flex"
                                                                 alignItems="center"
                                                                 justifyContent="center"
-                                                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); toggleHighlight(item.itemId); }}
-                                                                color={isHighlighted ? "#d4f000" : "rgba(255,255,255,0.3)"}
-                                                                _hover={{ color: isHighlighted ? "#bfdb00" : "#d4f000" }}
+                                                                onClick={(e: React.MouseEvent) => {
+                                                                    e.stopPropagation();
+                                                                    toggleHighlight(item.itemId);
+                                                                }}
+                                                                color={
+                                                                    isHighlighted
+                                                                        ? "#d4f000"
+                                                                        : "rgba(255,255,255,0.3)"
+                                                                }
+                                                                _hover={{
+                                                                    color: isHighlighted
+                                                                        ? "#bfdb00"
+                                                                        : "#d4f000",
+                                                                }}
                                                                 zIndex={1}
                                                             >
-                                                                <LuStar size={9} fill={isHighlighted ? "currentColor" : "none"} />
+                                                                <LuStar
+                                                                    size={9}
+                                                                    fill={
+                                                                        isHighlighted
+                                                                            ? "currentColor"
+                                                                            : "none"
+                                                                    }
+                                                                />
                                                             </Box>
                                                         )}
                                                     </Box>

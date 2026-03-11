@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Badge, Box, Flex, Heading, Stack, Text } from "@chakra-ui/react";
 import {
     BarChart,
@@ -11,8 +11,7 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
-import { useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
-import { useDofusEvent } from "../useDofusEvent";
+import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import { useResourcesQuery } from "../resources/useResourcesQuery";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -102,8 +101,6 @@ export const HarvestPanel = () => {
     const [windowKey, setWindowKey] = useState<WindowKey>("6h");
     const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
 
-    const queryClient = useQueryClient();
-    const mappings = useMappings();
     const config = useConfig();
     const updateConfig = useUpdateConfigMutation();
 
@@ -117,13 +114,6 @@ export const HarvestPanel = () => {
         queryFn: () => window.api.readHarvestLog(),
         refetchOnWindowFocus: true,
     });
-
-    // Auto-update: invalidate query on new harvest event when checkbox is on
-    const invalidate = () => {
-        queryClient.invalidateQueries({ queryKey: ["harvest-log"] });
-    };
-    useDofusEvent(autoUpdate ? mappings.ObjetHarvestedEvent : null, invalidate);
-    useDofusEvent(autoUpdate ? mappings.ObjectHarvestedWithBonusEvent : null, invalidate);
 
     const { data: resources = [] } = useResourcesQuery();
 

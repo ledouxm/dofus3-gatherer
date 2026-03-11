@@ -5,7 +5,7 @@ import "./index.css";
 
 import { Box, CloseButton, Dialog, Flex, Text } from "@chakra-ui/react";
 import { LuSettings } from "react-icons/lu";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
     useBaseUrl,
     useConfig,
@@ -41,7 +41,9 @@ export function App() {
     const updateInfo = useUpdateCheck();
     const mappingsSynced = useMappingsSync();
     useInteractiveEvents();
-    useHarvestLog();
+    const queryClient = useQueryClient();
+    const harvestAutoUpdate = config?.harvests?.autoUpdate ?? true;
+    useHarvestLog(harvestAutoUpdate ? () => queryClient.invalidateQueries({ queryKey: ["harvest-log"] }) : undefined);
 
     const { data: adminToken = null } = useQuery({
         queryKey: ["admin-token"],

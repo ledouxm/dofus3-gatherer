@@ -65,8 +65,7 @@ export const RecoltablesLayer = ({ meta }: Props) => {
     const recoltables = queries
         .flatMap((q) => q.data ?? [])
         .filter((recoltable) => {
-            if (!recoltable?.pos) return false;
-            if (seen.has(recoltable._id)) return false;
+            if (seen.has(recoltable.id)) return false;
             if (
                 selectedWorldmapId !== null &&
                 recoltable.pos.worldMap !== Number(selectedWorldmapId)

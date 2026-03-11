@@ -6,7 +6,7 @@ function getFieldValue(data: Record<string, unknown>, path: string): unknown {
     return path.split(".").reduce((obj, key) => (obj as Record<string, unknown>)?.[key], data as unknown);
 }
 
-export const useHarvestLog = () => {
+export const useHarvestLog = (onAppended?: () => void) => {
     const mappings = useMappings();
 
     useDofusEvent(mappings.ObjetHarvestedEvent, async (packet) => {
@@ -25,6 +25,7 @@ export const useHarvestLog = () => {
             mapId: gameStore.get().character?.mapId ?? null,
             timestamp: new Date().toISOString(),
         });
+        onAppended?.();
     });
 
     useDofusEvent(mappings.ObjectHarvestedWithBonusEvent, async (packet) => {
@@ -46,5 +47,6 @@ export const useHarvestLog = () => {
             mapId: gameStore.get().character?.mapId ?? null,
             timestamp: new Date().toISOString(),
         });
+        onAppended?.();
     });
 };
