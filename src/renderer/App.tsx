@@ -25,7 +25,6 @@ import { ViewerApp } from "./viewer/ViewerApp";
 import { Toaster, toaster } from "./ui/toaster";
 import { useUpdateCheck } from "./useUpdateCheck";
 import { useMappingsSync } from "./useMappingsSync";
-import { CoordDisplay } from "./dofus-map/dofus-map.Grid";
 import { AdminPanel } from "./ui/AdminPanel";
 import { useInteractiveEvents } from "./game/useInteractiveEvents";
 import { useHarvestLog } from "./hooks/useHarvestLog";
@@ -154,7 +153,6 @@ export function App() {
                             <CharacterPosition meta={meta} />
                             <RecoltablesLayer meta={meta} />
                             <HintsLayer meta={meta} />
-                            <CoordDisplay meta={meta} />
                         </>
                     )}
                 </DofusLeafletMap>
