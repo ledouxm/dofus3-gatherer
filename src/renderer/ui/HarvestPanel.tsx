@@ -8,7 +8,6 @@ import {
     YAxis,
     Tooltip,
     CartesianGrid,
-    Legend,
     ResponsiveContainer,
 } from "recharts";
 import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
@@ -376,10 +375,6 @@ export const HarvestPanel = () => {
                                 }}
                                 labelStyle={{ color: "rgba(255,255,255,0.5)", marginBottom: 4 }}
                                 formatter={(value, name) => [value, resName(Number(name))]}
-                            />
-                            <Legend
-                                formatter={(value) => resName(Number(value))}
-                                wrapperStyle={{ fontSize: "11px", color: "rgba(255,255,255,0.45)" }}
                             />
                             {activeResourceIds.map((id, i) => (
                                 <Bar
