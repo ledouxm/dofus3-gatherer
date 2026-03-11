@@ -7,15 +7,6 @@ export const appStore = store<AppStore>({
         mappings: {
             MapCurrentEvent: null,
             "MapCurrentEvent.mapId": null,
-            QuestValidatedEvent: null,
-            "QuestValidatedEvent.questId": null,
-            InteractiveUsedEvent: null,
-            "InteractiveUsedEvent.resourceId": null,
-            "InteractiveUsedEvent.skillId": null,
-            "InteractiveUsedEvent.elementId": null,
-            InteractiveUseEndedEvent: null,
-            "InteractiveUseEndedEvent.elementId": null,
-            "InteractiveUseEndedEvent.skillId": null,
             ObjetHarvestedEvent: null,
             "ObjetHarvestedEvent.resourceId": null,
             "ObjetHarvestedEvent.quantity": null,
@@ -51,15 +42,6 @@ export type ConfigStore = {
     mappings: {
         MapCurrentEvent: string | null;
         "MapCurrentEvent.mapId": string | null;
-        QuestValidatedEvent: string | null;
-        "QuestValidatedEvent.questId": string | null;
-        InteractiveUsedEvent: string | null;
-        "InteractiveUsedEvent.resourceId": string | null;
-        "InteractiveUsedEvent.skillId": string | null;
-        "InteractiveUsedEvent.elementId": string | null;
-        InteractiveUseEndedEvent: string | null;
-        "InteractiveUseEndedEvent.elementId": string | null;
-        "InteractiveUseEndedEvent.skillId": string | null;
         ObjetHarvestedEvent: string | null;
         "ObjetHarvestedEvent.resourceId": string | null;
         "ObjetHarvestedEvent.quantity": string | null;
@@ -92,9 +74,17 @@ export type ConfigStore = {
         openedTabIds?: number[];
         activeTabId?: number | null;
     };
-    resourcePresets?: Array<{ id: string; name: string; iconItemId: number; resourceIds: number[] }>;
+    resourcePresets?: Array<{
+        id: string;
+        name: string;
+        iconItemId: number;
+        resourceIds: number[];
+    }>;
     highlightedResourceIds?: number[];
     activeTab?: string;
+    harvests?: {
+        autoUpdate?: boolean;
+    };
     explorer?: {
         section?: string;
         questsHistory?: unknown[];

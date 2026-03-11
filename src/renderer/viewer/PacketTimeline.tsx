@@ -15,6 +15,8 @@ interface PacketTimelineProps {
     onClear?: () => void;
     /** Maps obfuscated typeName → friendly name for packets that have a known mapping */
     knownTypes?: Map<string, string>;
+    /** Called when the user's scroll position changes between "at bottom" and "scrolled up" */
+    onScrollStateChange?: (atBottom: boolean) => void;
 }
 
 const SYNC_WINDOW_MS = 500;
@@ -42,14 +44,32 @@ function dataPreview(data: Record<string, unknown>): string {
  * - Auto-scrolls to keep the active region in view
  * - Click a row to expand its full JSON in the detail panel below
  */
-export const PacketTimeline = ({ packets, currentMs = -1, onSelect, selectedPacket, autoScrollToBottom, recordingThresholdMs, onClear, knownTypes }: PacketTimelineProps) => {
+export const PacketTimeline = ({ packets, currentMs = -1, onSelect, selectedPacket, autoScrollToBottom, recordingThresholdMs, onClear, knownTypes, onScrollStateChange }: PacketTimelineProps) => {
     const [filter, setFilter] = useState("");
     const activeRowRef = useRef<HTMLDivElement | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
+    const isAtBottomRef = useRef(true);
+    const onScrollStateChangeRef = useRef(onScrollStateChange);
+    onScrollStateChangeRef.current = onScrollStateChange;
 
     const filtered = filter
         ? packets.filter((p) => p.typeName.toLowerCase().includes(filter.toLowerCase()))
         : packets;
+
+    // Track whether user is at the bottom
+    useEffect(() => {
+        const list = listRef.current;
+        if (!list) return;
+        const handleScroll = () => {
+            const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 32;
+            if (atBottom !== isAtBottomRef.current) {
+                isAtBottomRef.current = atBottom;
+                onScrollStateChangeRef.current?.(atBottom);
+            }
+        };
+        list.addEventListener("scroll", handleScroll, { passive: true });
+        return () => list.removeEventListener("scroll", handleScroll);
+    }, []);
 
     // Auto-scroll to keep the nearest active packet visible (recording playback mode)
     useEffect(() => {
@@ -65,9 +85,9 @@ export const PacketTimeline = ({ packets, currentMs = -1, onSelect, selectedPack
         }
     }, [currentMs, autoScrollToBottom]);
 
-    // Auto-scroll to bottom in live mode
+    // Auto-scroll to bottom in live mode — only when already at bottom
     useEffect(() => {
-        if (!autoScrollToBottom || !listRef.current) return;
+        if (!autoScrollToBottom || !listRef.current || !isAtBottomRef.current) return;
         listRef.current.scrollTop = listRef.current.scrollHeight;
     }, [packets, autoScrollToBottom]);
 

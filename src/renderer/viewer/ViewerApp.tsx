@@ -6,7 +6,7 @@ import {
     Heading,
     IconButton,
 } from "@chakra-ui/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { LuCheck, LuCopy, LuDownload, LuUpload, LuVideo } from "react-icons/lu";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { PacketTimeline, typeColor } from "./PacketTimeline";
@@ -34,8 +34,9 @@ export const ViewerApp = () => {
     const [selectedRecPacket, setSelectedRecPacket] = useState<PacketEntry | null>(null);
     const [rightTab, setRightTab] = useState<RightPanelTab>("live");
 
+    const liveLogFrozenRef = useRef(false);
     const { status, duration, start, stop, reset, recordingStartTime } = usePacketRecorder();
-    const { packets: livePackets, recordingThresholdMs, clear: clearLiveLog } = useLiveLog(500, recordingStartTime);
+    const { packets: livePackets, recordingThresholdMs, clear: clearLiveLog } = useLiveLog(500, recordingStartTime, liveLogFrozenRef);
     const mappings = useMappings();
     const knownTypes = useMemo(() => {
         const map = new Map<string, string>();
@@ -206,6 +207,7 @@ export const ViewerApp = () => {
                                     recordingThresholdMs={recordingThresholdMs}
                                     onClear={clearLiveLog}
                                     knownTypes={knownTypes}
+                                    onScrollStateChange={(atBottom) => { liveLogFrozenRef.current = !atBottom; }}
                                 />
                             </Panel>
                             <Separator style={{ height: "4px", cursor: "row-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />

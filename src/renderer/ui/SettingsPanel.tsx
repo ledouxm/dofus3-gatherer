@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import {
     LuClipboardPaste,
     LuDownload,
+    LuFolderOpen,
     LuInfo,
     LuNavigation2,
     LuRefreshCw,
@@ -30,27 +31,26 @@ type WindowInfo = { handle: number; title: string };
 
 const MAPPING_HELP: Record<keyof ConfigStore["mappings"], string> = {
     MapCurrentEvent:
-        "The obfuscated packet type name emitted by the server when the character changes map. Example: \"isj\".",
+        'The obfuscated packet type name emitted by the server when the character changes map. Example: "isj".',
     "MapCurrentEvent.mapId":
-        "The field key inside that packet's JSON data that contains the map ID. Example: \"mapId\" or \"a\".",
+        'The field key inside that packet\'s JSON data that contains the map ID. Example: "mapId" or "a".',
     QuestValidatedEvent:
         "The obfuscated packet type name emitted by the server when a quest is completed. Used to auto-advance guide progress.",
     "QuestValidatedEvent.questId":
         "The field key inside that packet's JSON data that contains the quest ID.",
     InteractiveUsedEvent:
-        "The obfuscated packet type name emitted when a character starts harvesting a resource. Supports dot-paths for nested fields, e.g. \"fexe.fnjq\".",
+        'The obfuscated packet type name emitted when a character starts harvesting a resource. Supports dot-paths for nested fields, e.g. "fexe.fnjq".',
     "InteractiveUsedEvent.resourceId":
-        "Dot-path to the resource type ID inside the packet (e.g. \"fexe.fnjq\").",
+        'Dot-path to the resource type ID inside the packet (e.g. "fexe.fnjq").',
     "InteractiveUsedEvent.skillId":
-        "Dot-path to the skill ID inside the packet (e.g. \"fexe.fnjr\").",
+        'Dot-path to the skill ID inside the packet (e.g. "fexe.fnjr").',
     "InteractiveUsedEvent.elementId":
-        "Dot-path to the interactive element ID on the map inside the packet (e.g. \"fexe.fnjt\").",
+        'Dot-path to the interactive element ID on the map inside the packet (e.g. "fexe.fnjt").',
     InteractiveUseEndedEvent:
         "The obfuscated packet type name emitted when a resource harvest completes (resource disappears).",
     "InteractiveUseEndedEvent.elementId":
         "Field key for the interactive element ID that finished being harvested (int32).",
-    "InteractiveUseEndedEvent.skillId":
-        "Field key for the skill ID used (int32).",
+    "InteractiveUseEndedEvent.skillId": "Field key for the skill ID used (int32).",
 };
 
 export const SettingsPanel = () => {
@@ -104,7 +104,9 @@ export const SettingsPanel = () => {
                         ...d,
                         ...Object.fromEntries(Object.entries(parsed).filter(([k]) => k in d)),
                     }));
-                } catch { /* ignore invalid JSON */ }
+                } catch {
+                    /* ignore invalid JSON */
+                }
             };
             reader.readAsText(file);
         };
@@ -159,97 +161,32 @@ export const SettingsPanel = () => {
     return (
         <Box p={6}>
             <Stack gap={8} maxW="640px" mx="auto">
-
-                {/* ── Configuration ── */}
-                <Box>
-                    <Flex align="center" gap={2} mb={5}>
-                        <LuSettings />
-                        <Heading size="md">Configuration</Heading>
-                    </Flex>
-
-                    <Stack gap={6}>
-                        {/* Packet Mappings */}
-                        <Box>
-                            <Flex align="center" justify="space-between" mb={4}>
-                                <Heading size="sm" color="whiteAlpha.600" textTransform="uppercase" letterSpacing="wider">
-                                    Packet Mappings
-                                </Heading>
-                                <Flex gap={1}>
-                                    <IconButton aria-label="Import mappings" size="xs" variant="ghost" onClick={handleImport}>
-                                        <LuUpload />
-                                    </IconButton>
-                                    <IconButton aria-label="Export mappings" size="xs" variant="ghost" onClick={handleExport}>
-                                        <LuDownload />
-                                    </IconButton>
-                                </Flex>
-                            </Flex>
-                            <Stack gap={4}>
-                                {(Object.keys(draft) as Array<keyof ConfigStore["mappings"]>).map((key) => (
-                                    <MappingField
-                                        key={key}
-                                        label={key}
-                                        help={MAPPING_HELP[key]}
-                                        value={draft[key] ?? ""}
-                                        onChange={(v) => setDraft((d) => ({ ...d, [key]: v || null }))}
-                                    />
-                                ))}
-                            </Stack>
-                            <Flex justify="flex-end" mt={4}>
-                                <Button
-                                    size="sm"
-                                    colorScheme="blue"
-                                    loading={updateConfig.isPending}
-                                    onClick={handleSave}
-                                >
-                                    Save
-                                </Button>
-                            </Flex>
-                        </Box>
-
-                        {/* CDN URL */}
-                        <Box>
-                            <Heading size="sm" color="whiteAlpha.600" textTransform="uppercase" letterSpacing="wider" mb={4}>
-                                CDN URL
-                            </Heading>
-                            <Flex gap={2} align="center">
-                                <Input
-                                    size="sm"
-                                    value={cdnUrl}
-                                    onChange={(e) => setCdnUrl(e.target.value)}
-                                    disabled={!editingCdn}
-                                    fontFamily="mono"
-                                    bg="whiteAlpha.50"
-                                    border="1px solid"
-                                    borderColor="whiteAlpha.200"
-                                    _focus={{ borderColor: "blue.400", bg: "whiteAlpha.100" }}
-                                    flex={1}
-                                />
-                                {editingCdn ? (
-                                    <Button size="sm" colorScheme="blue" onClick={handleSaveCdn} loading={updateConfig.isPending}>
-                                        Save
-                                    </Button>
-                                ) : (
-                                    <Button size="sm" variant="outline" onClick={() => setEditingCdn(true)}>
-                                        Edit
-                                    </Button>
-                                )}
-                            </Flex>
-                        </Box>
-                    </Stack>
-                </Box>
+                {/* ── Données utilisateur ── */}
+                <Flex justify="flex-start">
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        color="whiteAlpha.500"
+                        _hover={{ color: "whiteAlpha.800", bg: "whiteAlpha.100" }}
+                        onClick={() => window.api.openUserDataFolder()}
+                    >
+                        <LuFolderOpen />
+                        Ouvrir le dossier
+                    </Button>
+                </Flex>
 
                 {/* ── Travel ── */}
-                <Box borderTop="1px solid" borderColor="whiteAlpha.100" pt={8}>
-                    <Flex align="center" gap={2} mb={5}>
-                        <LuNavigation2 />
-                        <Heading size="md">Travel</Heading>
-                    </Flex>
-
+                <Box borderTop="1px solid" borderColor="whiteAlpha.100">
                     <Stack gap={5}>
                         {/* Window selector */}
                         <Box>
                             <HStack justify="space-between" mb={2}>
-                                <Heading size="sm" color="whiteAlpha.600" textTransform="uppercase" letterSpacing="wider">
+                                <Heading
+                                    size="sm"
+                                    color="whiteAlpha.600"
+                                    textTransform="uppercase"
+                                    letterSpacing="wider"
+                                >
                                     Fenêtres
                                 </Heading>
                                 <IconButton
@@ -258,14 +195,20 @@ export const SettingsPanel = () => {
                                     aria-label="Rafraîchir"
                                     color="whiteAlpha.600"
                                     _hover={{ color: "whiteAlpha.900" }}
-                                    onClick={() => refresh(windows.find((w) => w.handle === selectedHandle)?.title)}
+                                    onClick={() =>
+                                        refresh(
+                                            windows.find((w) => w.handle === selectedHandle)?.title,
+                                        )
+                                    }
                                 >
                                     <LuRefreshCw />
                                 </IconButton>
                             </HStack>
                             <select
                                 value={selectedHandle ?? ""}
-                                onChange={(e) => selectWindow(e.target.value ? Number(e.target.value) : null)}
+                                onChange={(e) =>
+                                    selectWindow(e.target.value ? Number(e.target.value) : null)
+                                }
                                 style={{
                                     background: "rgb(15, 18, 28)",
                                     border: "1px solid rgba(255,255,255,0.1)",
@@ -281,7 +224,11 @@ export const SettingsPanel = () => {
                                     — Sélectionner —
                                 </option>
                                 {windows.map((w) => (
-                                    <option key={w.handle} value={w.handle} style={{ background: "rgb(15, 18, 28)" }}>
+                                    <option
+                                        key={w.handle}
+                                        value={w.handle}
+                                        style={{ background: "rgb(15, 18, 28)" }}
+                                    >
                                         {w.title.length > 40 ? w.title.slice(0, 40) + "…" : w.title}
                                     </option>
                                 ))}
@@ -290,7 +237,13 @@ export const SettingsPanel = () => {
 
                         {/* Travel button */}
                         <Box>
-                            <Heading size="sm" color="whiteAlpha.600" textTransform="uppercase" letterSpacing="wider" mb={2}>
+                            <Heading
+                                size="sm"
+                                color="whiteAlpha.600"
+                                textTransform="uppercase"
+                                letterSpacing="wider"
+                                mb={2}
+                            >
                                 Coller un voyage
                             </Heading>
                             <Button
@@ -302,28 +255,39 @@ export const SettingsPanel = () => {
                                     window.api.focusWindowAndSend(selectedHandle, "travel")
                                 }
                                 bg="rgba(212,240,0,0.08)"
-                                color={selectedHandle !== null ? "#d4f000" : "rgba(255,255,255,0.3)"}
+                                color={
+                                    selectedHandle !== null ? "#d4f000" : "rgba(255,255,255,0.3)"
+                                }
                                 border={`1px solid ${selectedHandle !== null ? "rgba(212,240,0,0.4)" : "rgba(255,255,255,0.1)"}`}
                                 borderRadius="md"
                                 fontSize="13px"
                                 fontWeight="700"
                                 gap={2}
                                 _hover={{
-                                    bg: selectedHandle !== null ? "rgba(212,240,0,0.15)" : "rgba(212,240,0,0.08)",
+                                    bg:
+                                        selectedHandle !== null
+                                            ? "rgba(212,240,0,0.15)"
+                                            : "rgba(212,240,0,0.08)",
                                 }}
                                 _disabled={{ opacity: 1, cursor: "not-allowed" }}
                             >
                                 <LuClipboardPaste />
                                 Voyager
                             </Button>
-                            <Text fontSize="10px" color="whiteAlpha.600" lineHeight="1.4" mt={2}>
+                            <Text fontSize="xs" color="whiteAlpha.600" lineHeight="1.4" mt={2}>
                                 Colle la commande <b>/travel</b> du presse-papier dans le jeu
                             </Text>
                         </Box>
 
                         {/* Click behavior */}
                         <Box>
-                            <Heading size="sm" color="whiteAlpha.600" textTransform="uppercase" letterSpacing="wider" mb={3}>
+                            <Heading
+                                size="sm"
+                                color="whiteAlpha.600"
+                                textTransform="uppercase"
+                                letterSpacing="wider"
+                                mb={3}
+                            >
                                 Comportement des clics
                             </Heading>
                             <HStack gap={2} mb={2}>
@@ -331,13 +295,22 @@ export const SettingsPanel = () => {
                                     size="sm"
                                     flex={1}
                                     onClick={() => setClickMode("copy")}
-                                    bg={clickMode === "copy" ? "rgba(212,240,0,0.12)" : "transparent"}
-                                    color={clickMode === "copy" ? "#d4f000" : "rgba(255,255,255,0.7)"}
+                                    bg={
+                                        clickMode === "copy"
+                                            ? "rgba(212,240,0,0.12)"
+                                            : "transparent"
+                                    }
+                                    color={
+                                        clickMode === "copy" ? "#d4f000" : "rgba(255,255,255,0.7)"
+                                    }
                                     border={`1px solid ${clickMode === "copy" ? "rgba(212,240,0,0.5)" : "rgba(255,255,255,0.2)"}`}
                                     borderRadius="md"
                                     fontWeight="600"
                                     _hover={{
-                                        bg: clickMode === "copy" ? "rgba(212,240,0,0.18)" : "rgba(255,255,255,0.08)",
+                                        bg:
+                                            clickMode === "copy"
+                                                ? "rgba(212,240,0,0.18)"
+                                                : "rgba(255,255,255,0.08)",
                                     }}
                                 >
                                     Copier
@@ -346,13 +319,22 @@ export const SettingsPanel = () => {
                                     size="sm"
                                     flex={1}
                                     onClick={() => setClickMode("travel")}
-                                    bg={clickMode === "travel" ? "rgba(212,240,0,0.12)" : "transparent"}
-                                    color={clickMode === "travel" ? "#d4f000" : "rgba(255,255,255,0.7)"}
+                                    bg={
+                                        clickMode === "travel"
+                                            ? "rgba(212,240,0,0.12)"
+                                            : "transparent"
+                                    }
+                                    color={
+                                        clickMode === "travel" ? "#d4f000" : "rgba(255,255,255,0.7)"
+                                    }
                                     border={`1px solid ${clickMode === "travel" ? "rgba(212,240,0,0.5)" : "rgba(255,255,255,0.2)"}`}
                                     borderRadius="md"
                                     fontWeight="600"
                                     _hover={{
-                                        bg: clickMode === "travel" ? "rgba(212,240,0,0.18)" : "rgba(255,255,255,0.08)",
+                                        bg:
+                                            clickMode === "travel"
+                                                ? "rgba(212,240,0,0.18)"
+                                                : "rgba(255,255,255,0.08)",
                                     }}
                                 >
                                     Voyage auto
@@ -364,9 +346,116 @@ export const SettingsPanel = () => {
                                     : "Double-cliquer sur la map pour voyager automatiquement"}
                             </Text>
                         </Box>
+
+                        {/* Packet Mappings */}
+                        <Box>
+                            <Flex align="center" justify="space-between" mb={4}>
+                                <Heading
+                                    size="sm"
+                                    color="whiteAlpha.600"
+                                    textTransform="uppercase"
+                                    letterSpacing="wider"
+                                >
+                                    Packet Mappings
+                                </Heading>
+                                <Flex gap={1}>
+                                    <IconButton
+                                        aria-label="Import mappings"
+                                        size="xs"
+                                        variant="ghost"
+                                        onClick={handleImport}
+                                    >
+                                        <LuUpload />
+                                    </IconButton>
+                                    <IconButton
+                                        aria-label="Export mappings"
+                                        size="xs"
+                                        variant="ghost"
+                                        onClick={handleExport}
+                                    >
+                                        <LuDownload />
+                                    </IconButton>
+                                </Flex>
+                            </Flex>
+                            <Stack gap={4}>
+                                {(Object.keys(draft) as Array<keyof ConfigStore["mappings"]>).map(
+                                    (key) => (
+                                        <MappingField
+                                            key={key}
+                                            label={key}
+                                            help={MAPPING_HELP[key]}
+                                            value={draft[key] ?? ""}
+                                            onChange={(v) =>
+                                                setDraft((d) => ({ ...d, [key]: v || null }))
+                                            }
+                                        />
+                                    ),
+                                )}
+                            </Stack>
+                            <Flex justify="flex-end" mt={4}>
+                                <Button
+                                    size="sm"
+                                    colorScheme="blue"
+                                    loading={updateConfig.isPending}
+                                    onClick={handleSave}
+                                >
+                                    Save
+                                </Button>
+                            </Flex>
+                        </Box>
+                        <Box>
+                            <Stack gap={6}>
+                                {/* Backend URL */}
+                                <Box>
+                                    <Heading
+                                        size="sm"
+                                        color="whiteAlpha.600"
+                                        textTransform="uppercase"
+                                        letterSpacing="wider"
+                                        mb={4}
+                                    >
+                                        Url du backend
+                                    </Heading>
+                                    <Flex gap={2} align="center">
+                                        <Input
+                                            size="sm"
+                                            value={cdnUrl}
+                                            onChange={(e) => setCdnUrl(e.target.value)}
+                                            disabled={!editingCdn}
+                                            fontFamily="mono"
+                                            bg="whiteAlpha.50"
+                                            border="1px solid"
+                                            borderColor="whiteAlpha.200"
+                                            _focus={{
+                                                borderColor: "blue.400",
+                                                bg: "whiteAlpha.100",
+                                            }}
+                                            flex={1}
+                                        />
+                                        {editingCdn ? (
+                                            <Button
+                                                size="sm"
+                                                colorScheme="blue"
+                                                onClick={handleSaveCdn}
+                                                loading={updateConfig.isPending}
+                                            >
+                                                Save
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => setEditingCdn(true)}
+                                            >
+                                                Edit
+                                            </Button>
+                                        )}
+                                    </Flex>
+                                </Box>
+                            </Stack>
+                        </Box>
                     </Stack>
                 </Box>
-
             </Stack>
         </Box>
     );

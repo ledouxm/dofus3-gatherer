@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge, Box, Flex, Heading, Stack, Text } from "@chakra-ui/react";
 import {
@@ -11,7 +11,7 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
-import { useMappings } from "../providers/ConfigProvider";
+import { useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import { useDofusEvent } from "../useDofusEvent";
 import { useResourcesQuery } from "../resources/useResourcesQuery";
 
@@ -20,20 +20,71 @@ import { useResourcesQuery } from "../resources/useResourcesQuery";
 const ACCENT = "#d4f000";
 
 const COLORS = [
-    "#d4f000", "#4ecdc4", "#ff6b6b", "#a8dadc", "#f7b731",
-    "#778ca3", "#a29bfe", "#fd79a8", "#00b894", "#e17055",
+    "#d4f000",
+    "#4ecdc4",
+    "#ff6b6b",
+    "#a8dadc",
+    "#f7b731",
+    "#778ca3",
+    "#a29bfe",
+    "#fd79a8",
+    "#00b894",
+    "#e17055",
 ];
 const colorFor = (i: number) => COLORS[i % COLORS.length];
 
 type WindowKey = "1h" | "6h" | "12h" | "24h" | "3j" | "7j";
 
-const WINDOWS: { key: WindowKey; label: string; hours: number; bucketMs: number; bucketFmt: (d: Date) => string }[] = [
-    { key: "1h",  label: "1h",  hours: 1,   bucketMs: 5 * 60_000,       bucketFmt: (d) => d.toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" }) },
-    { key: "6h",  label: "6h",  hours: 6,   bucketMs: 30 * 60_000,      bucketFmt: (d) => d.toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" }) },
-    { key: "12h", label: "12h", hours: 12,  bucketMs: 60 * 60_000,      bucketFmt: (d) => d.toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" }) },
-    { key: "24h", label: "24h", hours: 24,  bucketMs: 2 * 60 * 60_000,  bucketFmt: (d) => d.toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" }) },
-    { key: "3j",  label: "3j",  hours: 72,  bucketMs: 6 * 60 * 60_000,  bucketFmt: (d) => `${d.toLocaleDateString("fr", { day: "2-digit", month: "2-digit" })} ${d.toLocaleTimeString("fr", { hour: "2-digit" })}h` },
-    { key: "7j",  label: "7j",  hours: 168, bucketMs: 24 * 60 * 60_000, bucketFmt: (d) => d.toLocaleDateString("fr", { day: "2-digit", month: "2-digit" }) },
+const WINDOWS: {
+    key: WindowKey;
+    label: string;
+    hours: number;
+    bucketMs: number;
+    bucketFmt: (d: Date) => string;
+}[] = [
+    {
+        key: "1h",
+        label: "1h",
+        hours: 1,
+        bucketMs: 5 * 60_000,
+        bucketFmt: (d) => d.toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" }),
+    },
+    {
+        key: "6h",
+        label: "6h",
+        hours: 6,
+        bucketMs: 30 * 60_000,
+        bucketFmt: (d) => d.toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" }),
+    },
+    {
+        key: "12h",
+        label: "12h",
+        hours: 12,
+        bucketMs: 60 * 60_000,
+        bucketFmt: (d) => d.toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" }),
+    },
+    {
+        key: "24h",
+        label: "24h",
+        hours: 24,
+        bucketMs: 2 * 60 * 60_000,
+        bucketFmt: (d) => d.toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit" }),
+    },
+    {
+        key: "3j",
+        label: "3j",
+        hours: 72,
+        bucketMs: 6 * 60 * 60_000,
+        bucketFmt: (d) =>
+            `${d.toLocaleDateString("fr", { day: "2-digit", month: "2-digit" })} ${d.toLocaleTimeString("fr", { hour: "2-digit" })}h`,
+    },
+    {
+        key: "7j",
+        label: "7j",
+        hours: 168,
+        bucketMs: 24 * 60 * 60_000,
+        bucketFmt: (d) => d.toLocaleDateString("fr", { day: "2-digit", month: "2-digit" }),
+    },
 ];
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -49,11 +100,16 @@ type HarvestEntry = {
 
 export const HarvestPanel = () => {
     const [windowKey, setWindowKey] = useState<WindowKey>("6h");
-    const [autoUpdate, setAutoUpdate] = useState(false);
     const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
 
     const queryClient = useQueryClient();
     const mappings = useMappings();
+    const config = useConfig();
+    const updateConfig = useUpdateConfigMutation();
+
+    const autoUpdate = config?.harvests?.autoUpdate ?? true;
+    const setAutoUpdate = (val: boolean) =>
+        updateConfig.mutate({ harvests: { ...config?.harvests, autoUpdate: val } });
     const win = WINDOWS.find((w) => w.key === windowKey)!;
 
     const { data: log = [] } = useQuery({
@@ -63,7 +119,9 @@ export const HarvestPanel = () => {
     });
 
     // Auto-update: invalidate query on new harvest event when checkbox is on
-    const invalidate = () => { queryClient.invalidateQueries({ queryKey: ["harvest-log"] }); };
+    const invalidate = () => {
+        queryClient.invalidateQueries({ queryKey: ["harvest-log"] });
+    };
     useDofusEvent(autoUpdate ? mappings.ObjetHarvestedEvent : null, invalidate);
     useDofusEvent(autoUpdate ? mappings.ObjectHarvestedWithBonusEvent : null, invalidate);
 
@@ -139,6 +197,30 @@ export const HarvestPanel = () => {
         [filtered],
     );
 
+    const PAGE_SIZE = 10;
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+    const sentinelRef = useRef<HTMLDivElement>(null);
+
+    // Reset when filters/window change
+    useEffect(() => {
+        setVisibleCount(PAGE_SIZE);
+    }, [windowKey, selectedResourceIds]);
+
+    useEffect(() => {
+        const el = sentinelRef.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) setVisibleCount((n) => n + PAGE_SIZE);
+            },
+            { threshold: 0.1 },
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [listEntries]);
+
+    const visibleEntries = listEntries.slice(0, visibleCount);
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     const toggleResource = (id: number) =>
@@ -163,11 +245,10 @@ export const HarvestPanel = () => {
 
     return (
         <Flex flex={1} direction="column" p={4} gap={3} overflow="hidden" bg="rgba(10,12,18,0.92)">
-
             {/* Header row */}
             <Flex align="center" justify="space-between" flexShrink={0} gap={4}>
                 <Heading size="sm" color="whiteAlpha.900" letterSpacing="0.1em">
-                    HARVESTS
+                    RÉCOLTES
                 </Heading>
 
                 {/* Time window buttons */}
@@ -178,7 +259,8 @@ export const HarvestPanel = () => {
                             onClick={() => setWindowKey(w.key)}
                             style={{
                                 ...btnBase,
-                                borderColor: windowKey === w.key ? ACCENT : "rgba(255,255,255,0.15)",
+                                borderColor:
+                                    windowKey === w.key ? ACCENT : "rgba(255,255,255,0.15)",
                                 color: windowKey === w.key ? ACCENT : "rgba(255,255,255,0.5)",
                                 background: windowKey === w.key ? `${ACCENT}18` : "transparent",
                             }}
@@ -190,7 +272,16 @@ export const HarvestPanel = () => {
 
                 {/* Auto-update + stats */}
                 <Flex align="center" gap={3}>
-                    <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: "12px", color: "rgba(255,255,255,0.5)" }}>
+                    <label
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            cursor: "pointer",
+                            fontSize: "12px",
+                            color: "rgba(255,255,255,0.5)",
+                        }}
+                    >
                         <input
                             type="checkbox"
                             checked={autoUpdate}
@@ -199,8 +290,12 @@ export const HarvestPanel = () => {
                         />
                         Auto-update
                     </label>
-                    <Badge colorPalette="yellow" variant="subtle" fontFamily="mono">{totalQty} items</Badge>
-                    <Badge colorPalette="gray" variant="subtle" fontFamily="mono">{uniqueCount} res.</Badge>
+                    <Badge colorPalette="yellow" variant="subtle" fontFamily="mono">
+                        {totalQty} items
+                    </Badge>
+                    <Badge colorPalette="gray" variant="subtle" fontFamily="mono">
+                        {uniqueCount} res.
+                    </Badge>
                 </Flex>
             </Flex>
 
@@ -208,7 +303,8 @@ export const HarvestPanel = () => {
             {logResourceIds.length > 0 && (
                 <Flex gap={2} flexWrap="wrap" flexShrink={0}>
                     {logResourceIds.map((id, i) => {
-                        const isActive = selectedResourceIds.length === 0 || selectedResourceIds.includes(id);
+                        const isActive =
+                            selectedResourceIds.length === 0 || selectedResourceIds.includes(id);
                         return (
                             <Box
                                 key={id}
@@ -235,7 +331,8 @@ export const HarvestPanel = () => {
                         <Box
                             as="button"
                             onClick={() => setSelectedResourceIds([])}
-                            px={2} py="2px"
+                            px={2}
+                            py="2px"
                             borderRadius="full"
                             fontSize="11px"
                             color="whiteAlpha.400"
@@ -255,12 +352,16 @@ export const HarvestPanel = () => {
                 {filtered.length === 0 ? (
                     <Flex h="100%" align="center" justify="center">
                         <Text color="whiteAlpha.300" fontSize="sm">
-                            No harvests in this window.
+                            Aucune récolte dans cette période. Commence à récolter pour voir les
+                            stats ici !
                         </Text>
                     </Flex>
                 ) : (
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                        <BarChart
+                            data={chartData}
+                            margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
+                        >
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                             <XAxis
                                 dataKey="label"
@@ -296,7 +397,11 @@ export const HarvestPanel = () => {
                                     dataKey={String(id)}
                                     stackId="a"
                                     fill={colorFor(i)}
-                                    radius={i === activeResourceIds.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                                    radius={
+                                        i === activeResourceIds.length - 1
+                                            ? [3, 3, 0, 0]
+                                            : [0, 0, 0, 0]
+                                    }
                                 />
                             ))}
                         </BarChart>
@@ -314,16 +419,25 @@ export const HarvestPanel = () => {
             >
                 {listEntries.length === 0 ? (
                     <Flex h="60px" align="center" justify="center">
-                        <Text color="whiteAlpha.300" fontSize="sm">No entries.</Text>
+                        <Text color="whiteAlpha.300" fontSize="sm">
+                            No entries.
+                        </Text>
                     </Flex>
                 ) : (
                     <Stack gap={0}>
-                        {listEntries.map((e, i) => {
+                        {visibleEntries.map((e, i) => {
                             const colorIdx = activeResourceIds.indexOf(e.resourceId);
                             const c = colorFor(colorIdx >= 0 ? colorIdx : 0);
                             const t = new Date(e.timestamp);
-                            const timeStr = t.toLocaleTimeString("fr", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-                            const dateStr = t.toLocaleDateString("fr", { day: "2-digit", month: "2-digit" });
+                            const timeStr = t.toLocaleTimeString("fr", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                            });
+                            const dateStr = t.toLocaleDateString("fr", {
+                                day: "2-digit",
+                                month: "2-digit",
+                            });
                             return (
                                 <Flex
                                     key={i}
@@ -335,22 +449,44 @@ export const HarvestPanel = () => {
                                     _hover={{ bg: "rgba(255,255,255,0.03)" }}
                                 >
                                     <Flex align="center" gap={2}>
-                                        <Box w="6px" h="6px" borderRadius="full" bg={c} flexShrink={0} />
-                                        <Text fontSize="12px" color="whiteAlpha.800" fontWeight="500">
+                                        <Box
+                                            w="6px"
+                                            h="6px"
+                                            borderRadius="full"
+                                            bg={c}
+                                            flexShrink={0}
+                                        />
+                                        <Text
+                                            fontSize="12px"
+                                            color="whiteAlpha.800"
+                                            fontWeight="500"
+                                        >
                                             {resName(e.resourceId)}
                                         </Text>
                                     </Flex>
                                     <Flex align="center" gap={4}>
-                                        <Badge colorPalette="yellow" variant="subtle" fontFamily="mono" fontSize="11px">
+                                        <Badge
+                                            colorPalette="yellow"
+                                            variant="subtle"
+                                            fontFamily="mono"
+                                            fontSize="11px"
+                                        >
                                             +{e.quantity}
                                         </Badge>
-                                        <Text fontSize="11px" color="whiteAlpha.400" fontFamily="mono">
+                                        <Text
+                                            fontSize="11px"
+                                            color="whiteAlpha.400"
+                                            fontFamily="mono"
+                                        >
                                             {dateStr} {timeStr}
                                         </Text>
                                     </Flex>
                                 </Flex>
                             );
                         })}
+                        {visibleCount < listEntries.length && (
+                            <div ref={sentinelRef} style={{ height: 1 }} />
+                        )}
                     </Stack>
                 )}
             </Box>

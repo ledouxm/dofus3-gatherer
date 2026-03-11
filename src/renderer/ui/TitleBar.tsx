@@ -1,16 +1,34 @@
-import { Box, HStack, IconButton } from "@chakra-ui/react";
+import { Box, HStack, IconButton, Tooltip } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
-import { LuMinus, LuNavigation2, LuPin, LuSettings, LuX } from "react-icons/lu";
+import {
+    LuBookOpen,
+    LuMap,
+    LuMinus,
+    LuMonitor,
+    LuNavigation2,
+    LuPin,
+    LuSearch,
+    LuSettings,
+    LuShield,
+    LuSprout,
+    LuX,
+} from "react-icons/lu";
 
 export type AppTab = "map" | "viewer" | "admin" | "guides" | "explorer" | "harvests";
 
-const BASE_TABS: { id: AppTab; label: string }[] = [
-    { id: "map", label: "MAP" },
-    { id: "viewer", label: "VIEWER" },
-    { id: "guides", label: "GUIDES" },
-    { id: "explorer", label: "EXPLORER" },
-    { id: "harvests", label: "HARVESTS" },
+const BASE_TABS: { id: AppTab; label: string; icon: React.ReactNode }[] = [
+    { id: "map", label: "MAP", icon: <LuMap /> },
+    { id: "viewer", label: "VIEWER", icon: <LuMonitor /> },
+    { id: "guides", label: "GUIDES", icon: <LuBookOpen /> },
+    { id: "explorer", label: "EXPLORER", icon: <LuSearch /> },
+    { id: "harvests", label: "RÉCOLTES", icon: <LuSprout /> },
 ];
+
+const ADMIN_TAB: { id: AppTab; label: string; icon: React.ReactNode } = {
+    id: "admin",
+    label: "ADMIN",
+    icon: <LuShield />,
+};
 
 const ACTIVE_COLOR = "#d4f000";
 const INACTIVE_COLOR = "rgba(255,255,255,0.38)";
@@ -23,10 +41,14 @@ interface TitleBarProps {
     onOpenTravelWindow?: () => void;
 }
 
-export const TitleBar = ({ activeTab, onTabChange, showAdminTab, onOpenConfig, onOpenTravelWindow }: TitleBarProps) => {
-    const tabs = showAdminTab
-        ? [...BASE_TABS, { id: "admin" as AppTab, label: "ADMIN" }]
-        : BASE_TABS;
+export const TitleBar = ({
+    activeTab,
+    onTabChange,
+    showAdminTab,
+    onOpenConfig,
+    onOpenTravelWindow,
+}: TitleBarProps) => {
+    const tabs = showAdminTab ? [...BASE_TABS, ADMIN_TAB] : BASE_TABS;
     const [isPinned, setIsPinned] = useState(false);
 
     useEffect(() => {
@@ -114,29 +136,49 @@ export const TitleBar = ({ activeTab, onTabChange, showAdminTab, onOpenConfig, o
                     {tabs.map((tab) => {
                         const isActive = activeTab === tab.id;
                         return (
-                            <Box
-                                key={tab.id}
-                                as="button"
-                                onClick={() => onTabChange(tab.id)}
-                                display="flex"
-                                alignItems="center"
-                                px="12px"
-                                h="100%"
-                                fontSize="10px"
-                                fontWeight="600"
-                                letterSpacing="0.12em"
-                                color={isActive ? ACTIVE_COLOR : INACTIVE_COLOR}
-                                bg="transparent"
-                                border="none"
-                                borderBottom={isActive ? `2px solid ${ACTIVE_COLOR}` : "2px solid transparent"}
-                                cursor="pointer"
-                                userSelect="none"
-                                transition="color 0.15s, border-color 0.15s"
-                                _hover={{ color: isActive ? ACTIVE_COLOR : "rgba(255,255,255,0.7)" }}
-                                style={{ outline: "none", boxSizing: "border-box" }}
-                            >
-                                {tab.label}
-                            </Box>
+                            <Tooltip.Root key={tab.id} openDelay={300}>
+                                <Tooltip.Trigger asChild>
+                                    <Box
+                                        as="button"
+                                        onClick={() => onTabChange(tab.id)}
+                                        display="flex"
+                                        alignItems="center"
+                                        gap="5px"
+                                        px={{ base: "8px", md: "12px" }}
+                                        h="100%"
+                                        fontSize="10px"
+                                        fontWeight="600"
+                                        letterSpacing="0.12em"
+                                        color={isActive ? ACTIVE_COLOR : INACTIVE_COLOR}
+                                        bg="transparent"
+                                        border="none"
+                                        borderBottom={
+                                            isActive
+                                                ? `2px solid ${ACTIVE_COLOR}`
+                                                : "2px solid transparent"
+                                        }
+                                        cursor="pointer"
+                                        userSelect="none"
+                                        transition="color 0.15s, border-color 0.15s"
+                                        _hover={{
+                                            color: isActive
+                                                ? ACTIVE_COLOR
+                                                : "rgba(255,255,255,0.7)",
+                                        }}
+                                        style={{ outline: "none", boxSizing: "border-box" }}
+                                    >
+                                        <Box fontSize="12px" flexShrink={0}>
+                                            {tab.icon}
+                                        </Box>
+                                        <Box display={{ base: "none", md: "block" }}>
+                                            {tab.label}
+                                        </Box>
+                                    </Box>
+                                </Tooltip.Trigger>
+                                <Tooltip.Positioner>
+                                    <Tooltip.Content fontSize="xs">{tab.label}</Tooltip.Content>
+                                </Tooltip.Positioner>
+                            </Tooltip.Root>
                         );
                     })}
                 </HStack>

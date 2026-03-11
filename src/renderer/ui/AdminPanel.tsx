@@ -6,10 +6,7 @@ import { configStore } from "../providers/store";
 
 interface LatestMappings {
     timestamp: string;
-    mappings: {
-        MapCurrentEvent: string;
-        "MapCurrentEvent.mapId": string;
-    };
+    mappings: Record<string, string>;
 }
 
 export const AdminPanel = ({ token }: { token: string }) => {
@@ -32,9 +29,12 @@ export const AdminPanel = ({ token }: { token: string }) => {
         }
 
         const { mappings, mappingsTimestamp } = configStore.get();
+        const cleanMappings = Object.fromEntries(
+            Object.entries(mappings).filter(([, v]) => v !== null && v !== undefined && v !== ""),
+        ) as Record<string, string>;
         const payload: LatestMappings = {
             timestamp: mappingsTimestamp ?? new Date().toISOString(),
-            mappings,
+            mappings: cleanMappings,
         };
 
         setLoading(true);

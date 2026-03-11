@@ -68,8 +68,8 @@ export const usePacketRecorder = () => {
 
     // Register once on mount, deregister on unmount — prevents listener accumulation
     useEffect(() => {
-        window.api.onAnyServerPacket(packetHandler);
-        return () => { window.api.offAnyServerPacket(packetHandler); };
+        const id = window.api.addListener("server-packet-broadcast", packetHandler);
+        return () => { window.api.removeListener(id); };
     }, [packetHandler]);
 
     const start = useCallback(
