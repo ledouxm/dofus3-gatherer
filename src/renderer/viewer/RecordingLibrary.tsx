@@ -9,12 +9,11 @@ import {
     LuTrash2,
 } from "react-icons/lu";
 import { useConfig } from "../providers/ConfigProvider";
-import type { PacketEntry, RecordingMeta } from "./usePacketRecorder";
+import type { PacketEntry, RecorderStatus, RecordingMeta } from "./usePacketRecorder";
 import {
     formatDuration,
     formatDurationMs,
     type Recording,
-    usePacketRecorder,
 } from "./usePacketRecorder";
 import { useRecordings } from "./useRecordings";
 
@@ -23,15 +22,18 @@ type Source = Electron.DesktopCapturerSource;
 interface RecordingLibraryProps {
     onLoad: (recording: Recording & { filename: string }) => void;
     activeFilename: string | null;
+    status: RecorderStatus;
+    duration: number;
+    start: (stream: MediaStream) => Promise<void>;
+    stop: () => Promise<Recording & { savedFilename: string }>;
+    reset: () => void;
 }
 
-export const RecordingLibrary = ({ onLoad, activeFilename }: RecordingLibraryProps) => {
+export const RecordingLibrary = ({ onLoad, activeFilename, status, duration, start, stop, reset }: RecordingLibraryProps) => {
     const [sources, setSources] = useState<Source[]>([]);
     const [selectedSourceId, setSelectedSourceId] = useState<string>("");
     const [stream, setStream] = useState<MediaStream | null>(null);
     const config = useConfig();
-
-    const { status, duration, start, stop, reset } = usePacketRecorder();
     const { sorted, loading, refresh, toggleFavorite, moveFavoriteUp, moveFavoriteDown, deleteRecording, renameRecording } = useRecordings();
 
     const isRecording = status === "recording";

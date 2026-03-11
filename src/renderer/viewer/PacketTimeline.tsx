@@ -1,4 +1,4 @@
-import { Badge, Box, Flex, IconButton, Input, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, IconButton, Input, Text } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { LuCheck, LuCopy } from "react-icons/lu";
 import type { PacketEntry } from "./usePacketRecorder";
@@ -7,9 +7,14 @@ import { MapToConfigButton } from "./MapToConfigButton";
 
 interface PacketTimelineProps {
     packets: PacketEntry[];
-    currentMs: number;
+    currentMs?: number;
     onSelect: (packet: PacketEntry) => void;
     selectedPacket: PacketEntry | null;
+    autoScrollToBottom?: boolean;
+    recordingThresholdMs?: number | null;
+    onClear?: () => void;
+    /** Maps obfuscated typeName → friendly name for packets that have a known mapping */
+    knownTypes?: Map<string, string>;
 }
 
 const SYNC_WINDOW_MS = 500;
@@ -37,7 +42,7 @@ function dataPreview(data: Record<string, unknown>): string {
  * - Auto-scrolls to keep the active region in view
  * - Click a row to expand its full JSON in the detail panel below
  */
-export const PacketTimeline = ({ packets, currentMs, onSelect, selectedPacket }: PacketTimelineProps) => {
+export const PacketTimeline = ({ packets, currentMs = -1, onSelect, selectedPacket, autoScrollToBottom, recordingThresholdMs, onClear, knownTypes }: PacketTimelineProps) => {
     const [filter, setFilter] = useState("");
     const activeRowRef = useRef<HTMLDivElement | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
@@ -46,8 +51,9 @@ export const PacketTimeline = ({ packets, currentMs, onSelect, selectedPacket }:
         ? packets.filter((p) => p.typeName.toLowerCase().includes(filter.toLowerCase()))
         : packets;
 
-    // Auto-scroll to keep the nearest active packet visible
+    // Auto-scroll to keep the nearest active packet visible (recording playback mode)
     useEffect(() => {
+        if (autoScrollToBottom) return;
         if (activeRowRef.current && listRef.current) {
             const list = listRef.current;
             const row = activeRowRef.current;
@@ -57,12 +63,18 @@ export const PacketTimeline = ({ packets, currentMs, onSelect, selectedPacket }:
                 list.scrollTop = rowTop - list.clientHeight / 2;
             }
         }
-    }, [currentMs]);
+    }, [currentMs, autoScrollToBottom]);
+
+    // Auto-scroll to bottom in live mode
+    useEffect(() => {
+        if (!autoScrollToBottom || !listRef.current) return;
+        listRef.current.scrollTop = listRef.current.scrollHeight;
+    }, [packets, autoScrollToBottom]);
 
     return (
         <Flex direction="column" h="100%" gap={0} overflow="hidden">
             {/* Filter */}
-            <Box p={2} borderBottom="1px solid" borderColor="whiteAlpha.100">
+            <Flex p={2} gap={2} borderBottom="1px solid" borderColor="whiteAlpha.100" align="center">
                 <Input
                     size="sm"
                     placeholder="Filter by packet type..."
@@ -74,8 +86,24 @@ export const PacketTimeline = ({ packets, currentMs, onSelect, selectedPacket }:
                     _focus={{ borderColor: "blue.400" }}
                     fontFamily="mono"
                     fontSize="xs"
+                    flex={1}
                 />
-            </Box>
+                {onClear && (
+                    <Button
+                        size="xs"
+                        variant="ghost"
+                        color="whiteAlpha.400"
+                        _hover={{ color: "red.300", bg: "whiteAlpha.100" }}
+                        flexShrink={0}
+                        onClick={onClear}
+                    >
+                        Clear
+                    </Button>
+                )}
+                <Text fontSize="9px" color="whiteAlpha.300" flexShrink={0} fontFamily="mono">
+                    {packets.length}
+                </Text>
+            </Flex>
 
             {/* Packet rows */}
             <Box ref={listRef} flex={1} overflowY="auto" css={{ "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: "rgba(255,255,255,0.15)", borderRadius: "2px" } }}>
@@ -87,10 +115,12 @@ export const PacketTimeline = ({ packets, currentMs, onSelect, selectedPacket }:
                     </Flex>
                 )}
                 {filtered.map((packet, i) => {
-                    const isActive = Math.abs(packet.relativeMs - currentMs) <= SYNC_WINDOW_MS;
+                    const isActive = currentMs >= 0 && Math.abs(packet.relativeMs - currentMs) <= SYNC_WINDOW_MS;
+                    const isRecording = recordingThresholdMs !== null && recordingThresholdMs !== undefined && packet.relativeMs >= recordingThresholdMs;
                     const isSelected = selectedPacket === packet;
                     const isFirst = i === 0 || !filtered[i - 1] || Math.abs(filtered[i - 1].relativeMs - currentMs) > SYNC_WINDOW_MS;
                     const ref = isActive && isFirst ? activeRowRef : undefined;
+                    const friendlyName = knownTypes?.get(packet.typeName);
 
                     return (
                         <Flex
@@ -101,9 +131,9 @@ export const PacketTimeline = ({ packets, currentMs, onSelect, selectedPacket }:
                             px={3}
                             py="6px"
                             cursor="pointer"
-                            bg={isSelected ? "blue.900" : isActive ? "whiteAlpha.100" : "transparent"}
+                            bg={isSelected ? "blue.900" : friendlyName ? "rgba(212,240,0,0.04)" : isActive ? "whiteAlpha.100" : "transparent"}
                             borderLeft="2px solid"
-                            borderLeftColor={isActive ? "blue.400" : "transparent"}
+                            borderLeftColor={isSelected ? "blue.400" : isRecording ? "orange.400" : friendlyName ? "#d4f000" : isActive ? "blue.400" : "transparent"}
                             _hover={{ bg: isSelected ? "blue.800" : "whiteAlpha.100" }}
                             onClick={() => onSelect(packet)}
                             transition="background 0.1s"
@@ -120,6 +150,25 @@ export const PacketTimeline = ({ packets, currentMs, onSelect, selectedPacket }:
                             >
                                 {packet.typeName}
                             </Badge>
+                            {friendlyName && (
+                                <Badge
+                                    fontSize="8px"
+                                    px="3px"
+                                    py="1px"
+                                    flexShrink={0}
+                                    bg="rgba(212,240,0,0.15)"
+                                    color="#d4f000"
+                                    border="1px solid rgba(212,240,0,0.3)"
+                                    fontFamily="mono"
+                                >
+                                    {friendlyName}
+                                </Badge>
+                            )}
+                            {isRecording && (
+                                <Badge fontSize="8px" colorScheme="orange" px="3px" py="1px" flexShrink={0}>
+                                    REC
+                                </Badge>
+                            )}
                             <Text
                                 fontSize="10px"
                                 color="whiteAlpha.500"

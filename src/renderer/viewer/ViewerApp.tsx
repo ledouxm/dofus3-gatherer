@@ -6,16 +6,17 @@ import {
     Heading,
     IconButton,
 } from "@chakra-ui/react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { LuCheck, LuCopy, LuDownload, LuUpload, LuVideo } from "react-icons/lu";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { PacketTimeline, typeColor } from "./PacketTimeline";
-import { type PacketEntry, type Recording, formatMs } from "./usePacketRecorder";
+import { type PacketEntry, type Recording, formatMs, usePacketRecorder } from "./usePacketRecorder";
+import { useMappings } from "../providers/ConfigProvider";
 import { VideoPlayer } from "./VideoPlayer";
 import { RecordingLibrary } from "./RecordingLibrary";
-import { MappingAssistant } from "./MappingAssistant";
+import { useLiveLog } from "./useLiveLog";
 
-type RightPanelTab = "packets" | "assistant";
+type RightPanelTab = "live" | "packets";
 
 /**
  * Packet Viewer tab.
@@ -23,20 +24,36 @@ type RightPanelTab = "packets" | "assistant";
  * Layout:
  * - Left sidebar: RecordingLibrary (record controls + saved recordings list)
  * - Center: Video player
- * - Right: Packet timeline + JSON detail
+ * - Right: Live log | Loaded recording timeline
  */
 export const ViewerApp = () => {
     const [recording, setRecording] = useState<Recording | null>(null);
     const [activeFilename, setActiveFilename] = useState<string | null>(null);
     const [currentMs, setCurrentMs] = useState(0);
-    const [selectedPacket, setSelectedPacket] = useState<PacketEntry | null>(null);
-    const [rightTab, setRightTab] = useState<RightPanelTab>("packets");
+    const [selectedLivePacket, setSelectedLivePacket] = useState<PacketEntry | null>(null);
+    const [selectedRecPacket, setSelectedRecPacket] = useState<PacketEntry | null>(null);
+    const [rightTab, setRightTab] = useState<RightPanelTab>("live");
+
+    const { status, duration, start, stop, reset, recordingStartTime } = usePacketRecorder();
+    const { packets: livePackets, recordingThresholdMs, clear: clearLiveLog } = useLiveLog(500, recordingStartTime);
+    const mappings = useMappings();
+    const knownTypes = useMemo(() => {
+        const map = new Map<string, string>();
+        if (!mappings) return map;
+        for (const [friendlyName, obfTypeName] of Object.entries(mappings)) {
+            if (!friendlyName.includes(".") && typeof obfTypeName === "string") {
+                map.set(obfTypeName, friendlyName);
+            }
+        }
+        return map;
+    }, [mappings]);
 
     const handleLoad = useCallback((rec: Recording & { filename: string }) => {
         setRecording(rec);
         setActiveFilename(rec.filename);
-        setSelectedPacket(null);
+        setSelectedRecPacket(null);
         setCurrentMs(0);
+        setRightTab("packets");
     }, []);
 
     const handleSave = useCallback(async () => {
@@ -61,7 +78,8 @@ export const ViewerApp = () => {
             : null;
         setRecording({ startTime: 0, packets: data.packets as PacketEntry[], videoBuffer });
         setActiveFilename(null);
-        setSelectedPacket(null);
+        setSelectedRecPacket(null);
+        setRightTab("packets");
     }, []);
 
     return (
@@ -120,7 +138,15 @@ export const ViewerApp = () => {
             <Group style={{ flex: 1, overflow: "hidden", minHeight: 0 }}>
                 {/* Library sidebar */}
                 <Panel defaultSize={20} minSize={14} style={{ display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
-                    <RecordingLibrary onLoad={handleLoad} activeFilename={activeFilename} />
+                    <RecordingLibrary
+                        onLoad={handleLoad}
+                        activeFilename={activeFilename}
+                        status={status}
+                        duration={duration}
+                        start={start}
+                        stop={stop}
+                        reset={reset}
+                    />
                 </Panel>
 
                 <Separator style={{ width: "4px", cursor: "col-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
@@ -137,7 +163,7 @@ export const ViewerApp = () => {
 
                 <Separator style={{ width: "4px", cursor: "col-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
 
-                {/* Right side: tab toggle + packet list/assistant */}
+                {/* Right side: tab toggle + live/packets */}
                 <Panel defaultSize={38} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
                     {/* Tab bar */}
                     <Flex
@@ -146,7 +172,7 @@ export const ViewerApp = () => {
                         borderColor="whiteAlpha.100"
                         bg="gray.900"
                     >
-                        {(["packets", "assistant"] as RightPanelTab[]).map((tab) => (
+                        {(["live", "packets"] as RightPanelTab[]).map((tab) => (
                             <Box
                                 key={tab}
                                 as="button"
@@ -169,25 +195,40 @@ export const ViewerApp = () => {
                     </Flex>
 
                     {/* Panel content */}
-                    {rightTab === "packets" ? (
+                    {rightTab === "live" ? (
+                        <Group orientation="vertical" style={{ flex: 1, overflow: "hidden" }}>
+                            <Panel defaultSize={60} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                                <PacketTimeline
+                                    packets={livePackets}
+                                    onSelect={setSelectedLivePacket}
+                                    selectedPacket={selectedLivePacket}
+                                    autoScrollToBottom
+                                    recordingThresholdMs={recordingThresholdMs}
+                                    onClear={clearLiveLog}
+                                    knownTypes={knownTypes}
+                                />
+                            </Panel>
+                            <Separator style={{ height: "4px", cursor: "row-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+                            <Panel defaultSize={40} minSize={10} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                                <JsonDetail packet={selectedLivePacket} />
+                            </Panel>
+                        </Group>
+                    ) : (
                         <Group orientation="vertical" style={{ flex: 1, overflow: "hidden" }}>
                             <Panel defaultSize={60} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
                                 <PacketTimeline
                                     packets={recording?.packets ?? []}
                                     currentMs={currentMs}
-                                    onSelect={setSelectedPacket}
-                                    selectedPacket={selectedPacket}
+                                    onSelect={setSelectedRecPacket}
+                                    selectedPacket={selectedRecPacket}
+                                    knownTypes={knownTypes}
                                 />
                             </Panel>
                             <Separator style={{ height: "4px", cursor: "row-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
                             <Panel defaultSize={40} minSize={10} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                                <JsonDetail packet={selectedPacket} />
+                                <JsonDetail packet={selectedRecPacket} />
                             </Panel>
                         </Group>
-                    ) : (
-                        <Box flex={1} overflow="hidden" display="flex" flexDirection="column">
-                            <MappingAssistant recording={recording} />
-                        </Box>
                     )}
                 </Panel>
             </Group>

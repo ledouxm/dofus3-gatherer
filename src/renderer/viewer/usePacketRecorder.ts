@@ -45,6 +45,7 @@ export const formatDurationMs = (ms: number): string => {
 export const usePacketRecorder = () => {
     const [status, setStatus] = useState<RecorderStatus>("idle");
     const [duration, setDuration] = useState(0);
+    const [recordingStartTime, setRecordingStartTime] = useState<number | null>(null);
 
     const startTimeRef = useRef<number>(0);
     const packetsRef = useRef<PacketEntry[]>([]);
@@ -77,6 +78,7 @@ export const usePacketRecorder = () => {
             chunksRef.current = [];
             startTimeRef.current = Date.now();
             isRecordingRef.current = true;
+            setRecordingStartTime(startTimeRef.current);
             setDuration(0);
             setStatus("recording");
 
@@ -106,6 +108,7 @@ export const usePacketRecorder = () => {
 
         isRecordingRef.current = false;
         startTimeRef.current = 0;
+        setRecordingStartTime(null);
 
         return new Promise((resolve) => {
             const recorder = mediaRecorderRef.current;
@@ -139,11 +142,12 @@ export const usePacketRecorder = () => {
         chunksRef.current = [];
         startTimeRef.current = 0;
         mediaRecorderRef.current = null;
+        setRecordingStartTime(null);
         setStatus("idle");
         setDuration(0);
     }, []);
 
-    return { status, duration, start, stop, reset };
+    return { status, duration, start, stop, reset, recordingStartTime };
 };
 
 export const formatDuration = (seconds: number): string => {
