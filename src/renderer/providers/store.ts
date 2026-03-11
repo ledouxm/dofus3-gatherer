@@ -36,6 +36,8 @@ export const appStore = store<AppStore>({
         travelHandle: null,
         highlightedResourceIds: [] as number[],
         hoveredHintName: null,
+        showHarvestedResources: false,
+        harvestedResourceIds: [] as number[],
     },
 });
 
@@ -61,6 +63,7 @@ export type ConfigStore = {
         "ObjetHarvestedEvent.elementId": string | null;
     };
     cdnBaseUrl?: string;
+    harvestMapper?: { enabled: boolean; showHarvested: boolean };
     selectedResourceIds?: number[];
     centerOnCharacter?: boolean;
     copyCoordinatesOnClick?: boolean;
@@ -113,5 +116,7 @@ export type AppStore = {
         travelHandle: number | null;
         highlightedResourceIds: number[];
         hoveredHintName: string | null;
+        showHarvestedResources: boolean;
+        harvestedResourceIds: number[];
     };
 };

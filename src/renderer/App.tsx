@@ -5,11 +5,13 @@ import "./index.css";
 
 import { Box, CloseButton, Dialog, Flex, Text } from "@chakra-ui/react";
 import { LuSettings } from "react-icons/lu";
+import { useQuery } from "@tanstack/react-query";
 import {
     useBaseUrl,
     useConfig,
     useMappings,
     useUpdateConfigMutation,
+    getBaseUrl,
 } from "./providers/ConfigProvider";
 import { CenterOnCharacterButton, CharacterPosition, Test } from "./game/character-position";
 import { HintFilterButton } from "./ui/HintCategoryButtons";
@@ -26,8 +28,10 @@ import { useUpdateCheck } from "./useUpdateCheck";
 import { useMappingsSync } from "./useMappingsSync";
 import { CoordDisplay } from "./dofus-map/dofus-map.Grid";
 import { AdminPanel } from "./ui/AdminPanel";
+import { AdminMapButton } from "./ui/AdminMapButton";
 import { useInteractiveEvents } from "./game/useInteractiveEvents";
 import { useDofusEvent } from "./useDofusEvent";
+import { useHarvestMapper } from "./hooks/useHarvestMapper";
 
 export function App() {
     const baseUrl = useBaseUrl();
@@ -35,11 +39,32 @@ export function App() {
     const updateConfig = useUpdateConfigMutation();
     const [activeTab, setActiveTab] = useState<AppTab>("map");
     const hasRestoredTab = useRef(false);
-    const [adminToken, setAdminToken] = useState<string | null>(null);
     const [configOpen, setConfigOpen] = useState(false);
     const updateInfo = useUpdateCheck();
     const mappingsSynced = useMappingsSync();
     useInteractiveEvents();
+
+    const { data: adminToken = null } = useQuery({
+        queryKey: ["admin-token"],
+        queryFn: async () => {
+            const token = await window.api.getAdminToken();
+            if (!token) return null;
+            const cdnBaseUrl = getBaseUrl();
+            if (!cdnBaseUrl) return null;
+            try {
+                const res = await fetch(`${cdnBaseUrl}/verify-token`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                return res.ok ? token : null;
+            } catch {
+                return null;
+            }
+        },
+    });
+
+    const mapperEnabled = !!adminToken && !!(config?.harvestMapper?.enabled);
+    const { sessionCount } = useHarvestMapper(mapperEnabled);
 
     useEffect(() => {
         if (!config || hasRestoredTab.current) return;
@@ -52,10 +77,6 @@ export function App() {
         setActiveTab(tab);
         updateConfig.mutate({ activeTab: tab });
     };
-
-    useEffect(() => {
-        window.api.getAdminToken().then(setAdminToken);
-    }, []);
 
     useEffect(() => {
         if (!mappingsSynced) return;
@@ -154,6 +175,7 @@ export function App() {
                     <WorldMapPickerButton />
                     <HintFilterButton />
                     <CenterOnCharacterButton />
+                    {adminToken && <AdminMapButton token={adminToken} sessionCount={sessionCount} />}
                 </div>
             </div>
 
@@ -201,7 +223,7 @@ export function App() {
                         overflow: "hidden",
                     }}
                 >
-                    <AdminPanel token={adminToken} />
+                    <AdminPanel token={adminToken} sessionCount={sessionCount} />
                 </div>
             )}
         </div>

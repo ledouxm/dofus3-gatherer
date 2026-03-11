@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMappings } from "../providers/ConfigProvider";
 import { useDofusEvent } from "../useDofusEvent";
+import { mapStore } from "../providers/store";
 
 function getFieldValue(data: Record<string, unknown>, path: string): unknown {
     return path.split(".").reduce((obj, key) => (obj as Record<string, unknown>)?.[key], data as unknown);
@@ -43,6 +44,10 @@ export const useHarvestMapper = (enabled: boolean) => {
             { filename: "element-resource-mappings.json" },
         );
         setSessionCount((c) => c + 1);
+        mapStore.set((v) => {
+            if (v.harvestedResourceIds.includes(resourceId)) return v;
+            return { ...v, harvestedResourceIds: [...v.harvestedResourceIds, resourceId] };
+        });
     });
 
     useEffect(() => () => { if (pendingRef.current) clearTimeout(pendingRef.current.timerId); }, []);

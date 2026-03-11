@@ -1,8 +1,7 @@
 import { Box, Button, Flex, Heading, Input, Stack, Switch, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { LuFolder, LuLeaf, LuUpload } from "react-icons/lu";
-import { getBaseUrl, useMappings } from "../providers/ConfigProvider";
-import { useHarvestMapper } from "../hooks/useHarvestMapper";
+import { getBaseUrl, useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import { configStore } from "../providers/store";
 
 interface LatestMappings {
@@ -13,11 +12,12 @@ interface LatestMappings {
     };
 }
 
-export const AdminPanel = ({ token }: { token: string }) => {
+export const AdminPanel = ({ token, sessionCount }: { token: string; sessionCount: number }) => {
     const [version, setVersion] = useState("");
-    const [mapperEnabled, setMapperEnabled] = useState(false);
+    const config = useConfig();
+    const updateConfig = useUpdateConfigMutation();
+    const mapperEnabled = config?.harvestMapper?.enabled ?? false;
     const mappings = useMappings();
-    const { sessionCount } = useHarvestMapper(mapperEnabled);
 
     useEffect(() => {
         window.api.getDofusVersion().then((v) => { if (v) setVersion(v); });
@@ -164,7 +164,7 @@ export const AdminPanel = ({ token }: { token: string }) => {
                         <Flex align="center" gap={3}>
                             <Switch.Root
                                 checked={mapperEnabled}
-                                onCheckedChange={(e) => setMapperEnabled(e.checked)}
+                                onCheckedChange={(e) => updateConfig.mutate({ harvestMapper: { enabled: e.checked, showHarvested: config?.harvestMapper?.showHarvested ?? false } })}
                                 colorPalette="yellow"
                             >
                                 <Switch.HiddenInput />

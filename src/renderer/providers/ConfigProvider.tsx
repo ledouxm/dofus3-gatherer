@@ -54,6 +54,14 @@ export const ConfigProvider = ({ children }: PropsWithChildren) => {
             if (response.characterPosition) {
                 gameStore.set((state) => ({ ...state, character: response.characterPosition }));
             }
+            if (response.harvestMapper?.showHarvested !== undefined) {
+                mapStore.set((v) => ({ ...v, showHarvestedResources: response.harvestMapper!.showHarvested }));
+            }
+            const harvestData = await window.api.getConfig({ filename: "element-resource-mappings.json" });
+            if (harvestData && typeof harvestData === "object") {
+                const ids = [...new Set(Object.values(harvestData as Record<string, number>).map(Number))];
+                mapStore.set((v) => ({ ...v, harvestedResourceIds: ids }));
+            }
 
             return response;
         },

@@ -40,9 +40,15 @@ export const RecoltablesLayer = ({ meta }: Props) => {
     const selectedResourceIds = useStoreValue(mapStore, (s) => s.selectedResourceIds);
     const selectedWorldmapId = useStoreValue(mapStore, (s) => s.selectedWorldmapId);
     const highlightedResourceIds = useStoreValue(mapStore, (s) => s.highlightedResourceIds);
+    const showHarvestedResources = useStoreValue(mapStore, (s) => s.showHarvestedResources);
+    const harvestedResourceIds = useStoreValue(mapStore, (s) => s.harvestedResourceIds);
+
+    const effectiveResourceIds = showHarvestedResources
+        ? selectedResourceIds.filter((id) => harvestedResourceIds.includes(id))
+        : selectedResourceIds;
 
     const iconsQueries = useQueries({
-        queries: selectedResourceIds.map((resId) => ({
+        queries: effectiveResourceIds.map((resId) => ({
             queryKey: ["itemIcon", resId],
             queryFn: async () => {
                 return await db
@@ -55,7 +61,7 @@ export const RecoltablesLayer = ({ meta }: Props) => {
     });
 
     const queries = useQueries({
-        queries: selectedResourceIds.map((id) => ({
+        queries: effectiveResourceIds.map((id) => ({
             queryKey: ["recoltables", id],
             queryFn: () => getRecoltables([String(id)]) as Promise<Recoltable[]>,
         })),
@@ -73,13 +79,13 @@ export const RecoltablesLayer = ({ meta }: Props) => {
             )
                 return false;
             seen.add(recoltable._id);
-            return recoltable.resources.some((res) => selectedResourceIds.includes(res));
+            return recoltable.resources.some((res) => effectiveResourceIds.includes(res));
         });
 
     const groupedByResource = recoltables.reduce(
         (acc, r) => {
             r.resources.forEach((res) => {
-                if (!selectedResourceIds.includes(res)) return;
+                if (!effectiveResourceIds.includes(res)) return;
                 if (!acc[res]) acc[res] = [];
 
                 acc[res].push(r);
