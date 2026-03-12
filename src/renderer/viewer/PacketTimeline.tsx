@@ -244,7 +244,7 @@ const PacketDetail = ({ packet }: { packet: PacketEntry }) => {
                 </Text>
                 <Box flex={1} />
                 <CopyButton value={packet.typeName} />
-                <MapToConfigButton value={packet.typeName} />
+                <MapToConfigButton value={packet.typeName} packetFields={Object.keys(packet.data as Record<string, unknown>)} />
             </Flex>
 
             {/* Field rows */}
