@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { DofusLeafletMap } from "./dofus-map/DofusLeafletMap";
 import { RecoltablesLayer } from "./dofus-map/RecoltablesLayer";
 import "./index.css";
@@ -12,6 +12,7 @@ import {
     useUpdateConfigMutation,
     getBaseUrl,
 } from "./providers/ConfigProvider";
+import { configStore } from "./providers/store";
 import { CenterOnCharacterButton, CharacterPosition } from "./game/character-position";
 import { HintFilterButton } from "./ui/HintCategoryButtons";
 import { ResourcePickerButton } from "./ui/ResourcePickerButton";
@@ -34,8 +35,12 @@ export function App() {
     const baseUrl = useBaseUrl();
     const config = useConfig();
     const updateConfig = useUpdateConfigMutation();
-    const [activeTab, setActiveTab] = useState<AppTab>("map");
-    const hasRestoredTab = useRef(false);
+    const validTabs: AppTab[] = ["map", "viewer", "guides", "explorer", "harvests", "admin"];
+    const [activeTab, setActiveTab] = useState<AppTab>(() => {
+        const saved = configStore.get().activeTab;
+        if (saved && (validTabs as string[]).includes(saved)) return saved as AppTab;
+        return "map";
+    });
     const [configOpen, setConfigOpen] = useState(false);
     const updateInfo = useUpdateCheck();
     const mappingsSynced = useMappingsSync();
@@ -62,13 +67,6 @@ export function App() {
             }
         },
     });
-
-    useEffect(() => {
-        if (!config || hasRestoredTab.current) return;
-        hasRestoredTab.current = true;
-        const saved = config.activeTab as AppTab | undefined;
-        if (saved && saved !== "settings") setActiveTab(saved);
-    }, [config]);
 
     const handleTabChange = (tab: AppTab) => {
         setActiveTab(tab);

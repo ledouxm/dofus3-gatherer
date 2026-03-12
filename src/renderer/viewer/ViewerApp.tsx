@@ -1,11 +1,4 @@
-import {
-    Badge,
-    Box,
-    Button,
-    Flex,
-    Heading,
-    IconButton,
-} from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, Heading, IconButton } from "@chakra-ui/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { LuCheck, LuCopy, LuDownload, LuUpload, LuVideo } from "react-icons/lu";
 import { Group, Panel, Separator } from "react-resizable-panels";
@@ -36,7 +29,11 @@ export const ViewerApp = () => {
 
     const liveLogFrozenRef = useRef(false);
     const { status, duration, start, stop, reset, recordingStartTime } = usePacketRecorder();
-    const { packets: livePackets, recordingThresholdMs, clear: clearLiveLog } = useLiveLog(500, recordingStartTime, liveLogFrozenRef);
+    const {
+        packets: livePackets,
+        recordingThresholdMs,
+        clear: clearLiveLog,
+    } = useLiveLog(500, recordingStartTime, liveLogFrozenRef);
     const mappings = useMappings();
     const knownTypes = useMemo(() => {
         const map = new Map<string, string>();
@@ -84,7 +81,14 @@ export const ViewerApp = () => {
     }, []);
 
     return (
-        <Flex direction="column" h="100vh" bg="gray.950" color="white" overflow="hidden">
+        <Flex
+            direction="column"
+            h="100vh"
+            bg="gray.950"
+            color="white"
+            overflow="hidden"
+            width="100%"
+        >
             {/* Title bar / toolbar */}
             <Flex
                 align="center"
@@ -104,7 +108,11 @@ export const ViewerApp = () => {
                 </Flex>
 
                 {recording && (
-                    <Badge colorScheme="blue" fontSize="10px" css={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+                    <Badge
+                        colorScheme="blue"
+                        fontSize="10px"
+                        css={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+                    >
                         {recording.packets.length} packets
                     </Badge>
                 )}
@@ -123,12 +131,7 @@ export const ViewerApp = () => {
                         <LuDownload size={10} />
                         Export
                     </Button>
-                    <Button
-                        size="xs"
-                        variant="outline"
-                        onClick={handleImport}
-                        gap={1}
-                    >
+                    <Button size="xs" variant="outline" onClick={handleImport} gap={1}>
                         <LuUpload size={10} />
                         Import
                     </Button>
@@ -138,7 +141,16 @@ export const ViewerApp = () => {
             {/* Main content: resizable panels */}
             <Group style={{ flex: 1, overflow: "hidden", minHeight: 0 }}>
                 {/* Library sidebar */}
-                <Panel defaultSize={20} minSize={14} style={{ display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+                <Panel
+                    defaultSize={20}
+                    minSize={14}
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        overflow: "hidden",
+                        borderRight: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                >
                     <RecordingLibrary
                         onLoad={handleLoad}
                         activeFilename={activeFilename}
@@ -150,10 +162,26 @@ export const ViewerApp = () => {
                     />
                 </Panel>
 
-                <Separator style={{ width: "4px", cursor: "col-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+                <Separator
+                    style={{
+                        width: "4px",
+                        cursor: "col-resize",
+                        background: "rgba(255,255,255,0.06)",
+                        flexShrink: 0,
+                    }}
+                />
 
                 {/* Video panel */}
-                <Panel defaultSize={42} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+                <Panel
+                    defaultSize={42}
+                    minSize={20}
+                    style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        overflow: "hidden",
+                        borderRight: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                >
                     <Flex direction="column" p={3} gap={3} h="100%" overflow="hidden">
                         <VideoPlayer
                             videoBuffer={recording?.videoBuffer ?? null}
@@ -162,10 +190,21 @@ export const ViewerApp = () => {
                     </Flex>
                 </Panel>
 
-                <Separator style={{ width: "4px", cursor: "col-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+                <Separator
+                    style={{
+                        width: "4px",
+                        cursor: "col-resize",
+                        background: "rgba(255,255,255,0.06)",
+                        flexShrink: 0,
+                    }}
+                />
 
                 {/* Right side: tab toggle + live/packets */}
-                <Panel defaultSize={38} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                <Panel
+                    defaultSize={38}
+                    minSize={20}
+                    style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}
+                >
                     {/* Tab bar */}
                     <Flex
                         flexShrink={0}
@@ -198,7 +237,15 @@ export const ViewerApp = () => {
                     {/* Panel content */}
                     {rightTab === "live" ? (
                         <Group orientation="vertical" style={{ flex: 1, overflow: "hidden" }}>
-                            <Panel defaultSize={60} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                            <Panel
+                                defaultSize={60}
+                                minSize={20}
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    overflow: "hidden",
+                                }}
+                            >
                                 <PacketTimeline
                                     packets={livePackets}
                                     onSelect={setSelectedLivePacket}
@@ -207,17 +254,42 @@ export const ViewerApp = () => {
                                     recordingThresholdMs={recordingThresholdMs}
                                     onClear={clearLiveLog}
                                     knownTypes={knownTypes}
-                                    onScrollStateChange={(atBottom) => { liveLogFrozenRef.current = !atBottom; }}
+                                    onScrollStateChange={(atBottom) => {
+                                        liveLogFrozenRef.current = !atBottom;
+                                    }}
                                 />
                             </Panel>
-                            <Separator style={{ height: "4px", cursor: "row-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
-                            <Panel defaultSize={40} minSize={10} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                            <Separator
+                                style={{
+                                    height: "4px",
+                                    cursor: "row-resize",
+                                    background: "rgba(255,255,255,0.06)",
+                                    flexShrink: 0,
+                                }}
+                            />
+                            <Panel
+                                defaultSize={40}
+                                minSize={10}
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    overflow: "hidden",
+                                }}
+                            >
                                 <JsonDetail packet={selectedLivePacket} />
                             </Panel>
                         </Group>
                     ) : (
                         <Group orientation="vertical" style={{ flex: 1, overflow: "hidden" }}>
-                            <Panel defaultSize={60} minSize={20} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                            <Panel
+                                defaultSize={60}
+                                minSize={20}
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    overflow: "hidden",
+                                }}
+                            >
                                 <PacketTimeline
                                     packets={recording?.packets ?? []}
                                     currentMs={currentMs}
@@ -226,8 +298,23 @@ export const ViewerApp = () => {
                                     knownTypes={knownTypes}
                                 />
                             </Panel>
-                            <Separator style={{ height: "4px", cursor: "row-resize", background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
-                            <Panel defaultSize={40} minSize={10} style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                            <Separator
+                                style={{
+                                    height: "4px",
+                                    cursor: "row-resize",
+                                    background: "rgba(255,255,255,0.06)",
+                                    flexShrink: 0,
+                                }}
+                            />
+                            <Panel
+                                defaultSize={40}
+                                minSize={10}
+                                style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    overflow: "hidden",
+                                }}
+                            >
                                 <JsonDetail packet={selectedRecPacket} />
                             </Panel>
                         </Group>
@@ -259,7 +346,9 @@ const JsonDetail = ({ packet }: { packet: PacketEntry | null }) => {
     if (!packet) {
         return (
             <Flex h="100%" align="center" justify="center">
-                <Box fontSize="xs" color="whiteAlpha.400">Select a packet to inspect its JSON</Box>
+                <Box fontSize="xs" color="whiteAlpha.400">
+                    Select a packet to inspect its JSON
+                </Box>
             </Flex>
         );
     }
@@ -286,7 +375,12 @@ const JsonDetail = ({ packet }: { packet: PacketEntry | null }) => {
                 bg="whiteAlpha.50"
                 flexShrink={0}
             >
-                <Badge colorScheme={typeColor(packet.typeName)} fontFamily="mono" fontSize="10px" px={1}>
+                <Badge
+                    colorScheme={typeColor(packet.typeName)}
+                    fontFamily="mono"
+                    fontSize="10px"
+                    px={1}
+                >
                     {packet.typeName}
                 </Badge>
                 <Box fontSize="10px" color="whiteAlpha.400" fontFamily="mono">
@@ -330,9 +424,24 @@ const JsonDetail = ({ packet }: { packet: PacketEntry | null }) => {
                 flex={1}
                 overflowY="auto"
                 p={3}
-                css={{ "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: "rgba(255,255,255,0.15)", borderRadius: "2px" } }}
+                css={{
+                    "&::-webkit-scrollbar": { width: "4px" },
+                    "&::-webkit-scrollbar-thumb": {
+                        background: "rgba(255,255,255,0.15)",
+                        borderRadius: "2px",
+                    },
+                }}
             >
-                <pre style={{ fontFamily: "monospace", fontSize: "11px", color: "#68d391", margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                <pre
+                    style={{
+                        fontFamily: "monospace",
+                        fontSize: "11px",
+                        color: "#68d391",
+                        margin: 0,
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-all",
+                    }}
+                >
                     {json}
                 </pre>
             </Box>

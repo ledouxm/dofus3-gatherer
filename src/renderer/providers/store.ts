@@ -7,13 +7,17 @@ export const appStore = store<AppStore>({
         mappings: {
             MapCurrentEvent: null,
             "MapCurrentEvent.mapId": null,
+
             ObjetHarvestedEvent: null,
             "ObjetHarvestedEvent.resourceId": null,
             "ObjetHarvestedEvent.quantity": null,
+
             ObjectHarvestedWithBonusEvent: null,
             "ObjectHarvestedWithBonusEvent.resourceId": null,
             "ObjectHarvestedWithBonusEvent.quantity": null,
             "ObjectHarvestedWithBonusEvent.bonusQuantity": null,
+
+            // "InventoryContentEvent": null,
         },
         cdnBaseUrl: undefined,
     },
