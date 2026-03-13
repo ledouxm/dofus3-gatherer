@@ -88,6 +88,9 @@ export type ConfigStore = {
     activeTab?: string;
     harvests?: {
         autoUpdate?: boolean;
+        craftingSubtab?: "stats" | "crafting";
+        craftingHistory?: unknown[];
+        craftingEntries?: unknown[];
     };
     explorer?: {
         section?: string;

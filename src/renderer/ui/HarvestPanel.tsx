@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Badge, Box, Flex, Heading, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Flex, HStack, Heading, Stack, Text } from "@chakra-ui/react";
+import { CraftingPanel } from "./CraftingPanel";
 import {
     BarChart,
     Bar,
@@ -16,6 +17,14 @@ import { useResourcesQuery } from "../resources/useResourcesQuery";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const ACCENT = "#d4f000";
+const INACTIVE = "rgba(255,255,255,0.38)";
+const border = "1px solid rgba(255,255,255,0.1)";
+
+type HarvestSubtab = "stats" | "crafting";
+const SUBTABS: { id: HarvestSubtab; label: string }[] = [
+    { id: "stats", label: "STATS" },
+    { id: "crafting", label: "CRAFTING" },
+];
 
 const COLORS = [
     "#d4f000",
@@ -97,11 +106,26 @@ type HarvestEntry = {
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const HarvestPanel = () => {
+    const [subtab, setSubtab] = useState<HarvestSubtab>("stats");
+    const hasRestoredSubtab = useRef(false);
+
     const [windowKey, setWindowKey] = useState<WindowKey>("6h");
     const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
 
     const config = useConfig();
     const updateConfig = useUpdateConfigMutation();
+
+    useEffect(() => {
+        if (!config || hasRestoredSubtab.current) return;
+        hasRestoredSubtab.current = true;
+        const saved = config.harvests?.craftingSubtab;
+        if (saved) setSubtab(saved);
+    }, [config]);
+
+    const handleSubtabChange = (t: HarvestSubtab) => {
+        setSubtab(t);
+        updateConfig.mutate({ harvests: { ...config?.harvests, craftingSubtab: t } });
+    };
 
     const autoUpdate = config?.harvests?.autoUpdate ?? true;
     const setAutoUpdate = (val: boolean) =>
@@ -233,7 +257,45 @@ export const HarvestPanel = () => {
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <Flex flex={1} direction="column" p={4} gap={3} overflow="hidden" bg="rgba(10,12,18,0.92)">
+        <Flex flex={1} direction="column" overflow="hidden" bg="rgba(10,12,18,0.92)">
+            {/* Subtab bar */}
+            <HStack
+                gap={0}
+                borderBottom={border}
+                flexShrink={0}
+                bg="rgba(10, 12, 18, 0.6)"
+            >
+                {SUBTABS.map((s) => {
+                    const isActive = subtab === s.id;
+                    return (
+                        <Box
+                            key={s.id}
+                            as="button"
+                            onClick={() => handleSubtabChange(s.id)}
+                            px="14px"
+                            h="32px"
+                            fontSize="10px"
+                            fontWeight="600"
+                            letterSpacing="0.1em"
+                            color={isActive ? ACCENT : INACTIVE}
+                            bg="transparent"
+                            border="none"
+                            borderBottom={isActive ? `2px solid ${ACCENT}` : "2px solid transparent"}
+                            cursor="pointer"
+                            userSelect="none"
+                            transition="color 0.15s, border-color 0.15s"
+                            _hover={{ color: isActive ? ACCENT : "rgba(255,255,255,0.7)" }}
+                            style={{ outline: "none", boxSizing: "border-box" }}
+                        >
+                            {s.label}
+                        </Box>
+                    );
+                })}
+            </HStack>
+
+            {/* Stats subtab */}
+            <Box flex={1} overflow="hidden" display={subtab === "stats" ? "flex" : "none"} flexDirection="column">
+            <Flex flex={1} direction="column" p={4} gap={3} overflow="hidden">
             {/* Header row */}
             <Flex align="center" justify="space-between" flexShrink={0} gap={4}>
                 <Heading size="sm" color="whiteAlpha.900" letterSpacing="0.1em">
@@ -474,6 +536,13 @@ export const HarvestPanel = () => {
                         )}
                     </Stack>
                 )}
+            </Box>
+            </Flex>
+            </Box>
+
+            {/* Crafting subtab */}
+            <Box flex={1} overflow="hidden" display={subtab === "crafting" ? "flex" : "none"} flexDirection="column">
+                <CraftingPanel />
             </Box>
         </Flex>
     );
