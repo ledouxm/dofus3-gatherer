@@ -30,6 +30,7 @@ import { AdminPanel } from "./ui/AdminPanel";
 import { useInteractiveEvents } from "./game/useInteractiveEvents";
 import { useHarvestLog } from "./hooks/useHarvestLog";
 import { HarvestPanel } from "./ui/HarvestPanel";
+import { trpcClient } from "./trpc";
 
 export function App() {
     const baseUrl = useBaseUrl();
@@ -52,7 +53,7 @@ export function App() {
     const { data: adminToken = null } = useQuery({
         queryKey: ["admin-token"],
         queryFn: async () => {
-            const token = await window.api.getAdminToken();
+            const token = await trpcClient.app.getAdminToken.query();
             if (!token) return null;
             const cdnBaseUrl = getBaseUrl();
             if (!cdnBaseUrl) return null;
@@ -94,7 +95,7 @@ export function App() {
             type: "info",
             action: {
                 label: "Download",
-                onClick: () => window.api.openExternal(updateInfo.releaseUrl),
+                onClick: () => trpcClient.app.openExternal.mutate({ url: updateInfo.releaseUrl }),
             },
             duration: undefined,
             closable: true,
@@ -109,7 +110,7 @@ export function App() {
                 onTabChange={handleTabChange}
                 showAdminTab={!!adminToken}
                 onOpenConfig={() => setConfigOpen(true)}
-                onOpenTravelWindow={() => window.api.openTravelWindow()}
+                onOpenTravelWindow={() => trpcClient.app.openTravelWindow.mutate()}
             />
 
             {/* Config modal */}

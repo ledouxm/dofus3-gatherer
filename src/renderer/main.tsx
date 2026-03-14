@@ -8,32 +8,26 @@ import { TranslationsProvider } from "./providers/TranslationsProvider";
 import { InitProvider } from "./providers/InitProvider";
 import { Provider } from "./ui/provider";
 import App from "./App";
-import type { AppApi } from "../preload/index";
-import { ElectronAPI } from "@electron-toolkit/preload";
+import { trpc, trpcClient } from "./trpc";
 
 const queryClient = new QueryClient({});
 
 const Root = () => (
     <StrictMode>
-        <QueryClientProvider client={queryClient}>
-            <Provider>
-                <InitProvider>
-                    <ConfigProvider>
-                        <TranslationsProvider>
-                            <App />
-                        </TranslationsProvider>
-                    </ConfigProvider>
-                </InitProvider>
-            </Provider>
-        </QueryClientProvider>
+        <trpc.Provider client={trpcClient} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+                <Provider>
+                    <InitProvider>
+                        <ConfigProvider>
+                            <TranslationsProvider>
+                                <App />
+                            </TranslationsProvider>
+                        </ConfigProvider>
+                    </InitProvider>
+                </Provider>
+            </QueryClientProvider>
+        </trpc.Provider>
     </StrictMode>
 );
 
 createRoot(document.getElementById("root")!).render(<Root />);
-
-declare global {
-    interface Window {
-        electronAPI: ElectronAPI;
-        api: AppApi;
-    }
-}

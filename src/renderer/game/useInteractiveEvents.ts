@@ -1,5 +1,6 @@
 import { useMappings } from "../providers/ConfigProvider";
 import { useDofusEvent } from "../useDofusEvent";
+import { trpcClient } from "../trpc";
 
 /**
  * Resolve a dot-separated path inside a packet data object.
@@ -26,7 +27,7 @@ export const useInteractiveEvents = () => {
 
         if (!resourceId) return;
 
-        const recoltables = await window.api.getRecoltables(resourceId);
+        const recoltables = await trpcClient.app.getRecoltables.query({ resourceId: String(resourceId) });
         console.log(
             `[InteractiveUsedEvent] resourceId=${resourceId} elementId=${elementId} skillId=${skillId}`,
             recoltables,

@@ -1,6 +1,7 @@
 import { Box, Button, HStack, IconButton, Text, VStack } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { LuRefreshCw } from "react-icons/lu";
+import { trpcClient } from "../trpc";
 
 type WindowInfo = { title: string };
 
@@ -12,7 +13,7 @@ export function QuickActionsPanel() {
     const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
 
     const refresh = async (savedTitle?: string) => {
-        const wins = await window.api.getOpenWindows();
+        const wins = await trpcClient.windows.getOpenWindows.query();
         setWindows(wins);
         if (wins.length === 0) return;
         const target = savedTitle ? wins.find((w) => w.title === savedTitle) : null;
@@ -24,19 +25,19 @@ export function QuickActionsPanel() {
     };
 
     useEffect(() => {
-        window.api.getConfig().then((cfg) => {
+        trpcClient.config.get.query({ filename: "config.json" }).then((cfg: any) => {
             refresh(cfg?.quickActions?.selectedWindowTitle);
         });
     }, []);
 
     const selectWindow = (title: string) => {
         setSelectedTitle(title);
-        window.api.saveConfig({ quickActions: { selectedWindowTitle: title } });
+        trpcClient.config.save.mutate({ config: { quickActions: { selectedWindowTitle: title } } });
     };
 
     const send = (action: "H" | "travel") => {
         if (selectedTitle === null) return;
-        window.api.focusWindowAndSend(selectedTitle, action);
+        trpcClient.windows.focusWindowAndSend.mutate({ title: selectedTitle, action });
     };
 
     return (

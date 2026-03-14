@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { trpc } from "../trpc";
 import { Box, Flex, Text, VStack } from "@chakra-ui/react";
 import { db } from "../db";
 import { translationStore } from "./store";
@@ -47,19 +48,13 @@ export function InitProvider({ children }: { children: ReactNode }) {
             });
     }, [mainSteps]);
 
-    useEffect(() => {
-        window.api.getInitStatus().then((initial) => {
-            setMainSteps(initial as InitStep[]);
-        });
+    trpc.initStatus.get.useQuery(undefined, {
+        onSuccess: (initial) => setMainSteps(initial as InitStep[]),
+    });
 
-        const listener = (_event: Electron.IpcRendererEvent, updated: InitStep[]) => {
-            setMainSteps(updated as InitStep[]);
-        };
-        window.api.onInitStatus(listener);
-        return () => {
-            window.api.offInitStatus(listener);
-        };
-    }, []);
+    trpc.initStatus.onChange.useSubscription(undefined, {
+        onData: (updated) => setMainSteps(updated as InitStep[]),
+    });
 
     if (ready) return <>{children}</>;
 

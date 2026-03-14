@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LuFolderOpen, LuX } from "react-icons/lu";
 import { useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import { useDofusEvent } from "../useDofusEvent";
+import { trpcClient } from "../trpc";
 import { buildProgressPatch } from "./guides/progressUtils";
 import { GuideList } from "./guides/GuideList";
 import { GuideViewer } from "./guides/GuideViewer";
@@ -174,7 +175,7 @@ export function GuidesPanel() {
         const index = new Map<number, Array<{ guideId: number; stepIndex: number }>>();
         await Promise.all(
             loadedEntries.map(async (entry) => {
-                const guide = await window.api.readGuideFile(entry.filePath).catch(() => null);
+                const guide = await trpcClient.guides.readFile.query({ filePath: entry.filePath }).catch(() => null);
                 if (!guide) return;
                 (guide as GuideFile).steps.forEach((step, si) => {
                     for (const qid of extractEndQuestIds(step.web_text)) {
@@ -211,12 +212,12 @@ export function GuidesPanel() {
             const guidesPath = deriveGuidesPath(ganymPath);
             const confPath = deriveConfPath(ganymPath);
 
-            const loaded = await window.api.readGuidesFolder(guidesPath).catch(() => []);
+            const loaded = await trpcClient.guides.readFolder.query({ folderPath: guidesPath }).catch(() => []);
             setEntries(loaded as GuideEntry[]);
             setHasFolder(true);
             buildQuestIndex(loaded as GuideEntry[]);
 
-            const confData = await window.api.readGuidesConf(confPath).catch(() => null);
+            const confData = await trpcClient.guides.readConf.query({ confPath }).catch(() => null);
             if (confData) {
                 setProfileName(confData.profileName);
                 setProgresses(confData.progresses as GuideProgress[]);
@@ -234,7 +235,7 @@ export function GuidesPanel() {
                     savedTabIds.map(async (id) => {
                         const entry = (loaded as GuideEntry[]).find((e) => e.id === id);
                         if (!entry) return;
-                        const guide = await window.api.readGuideFile(entry.filePath).catch(() => null);
+                        const guide = await trpcClient.guides.readFile.query({ filePath: entry.filePath }).catch(() => null);
                         if (guide) restoredTabs.push({ guideId: id, guide: guide as GuideFile, entry });
                     }),
                 );
@@ -268,7 +269,7 @@ export function GuidesPanel() {
                     await loadFromGanymedePath(savedPath);
                 } else {
                     // Try auto-detection
-                    const detected = await window.api.getDefaultGanymedePath().catch(() => null);
+                    const detected = await trpcClient.guides.getDefaultGanymedePath.query().catch(() => null);
                     if (detected) {
                         setGanymedePath(detected);
                         updateConfig.mutate({
@@ -296,7 +297,7 @@ export function GuidesPanel() {
     }, [profileName, internalProgressesToArray]);
 
     const handlePickGanymedeFolder = useCallback(async () => {
-        const picked = await window.api.pickGanymedeFolder();
+        const picked = await trpcClient.guides.pickGanymedeFolder.mutate();
         if (!picked) return;
         setLoading(true);
         try {
@@ -333,7 +334,7 @@ export function GuidesPanel() {
             setProgresses(newProgresses);
 
             if (ganymedePath) {
-                await window.api.writeGuidesConf(deriveConfPath(ganymedePath), newProgresses);
+                await trpcClient.guides.writeConf.mutate({ confPath: deriveConfPath(ganymedePath), progresses: newProgresses });
             } else {
                 updateConfig.mutate(buildProgressPatch(config!, guideId, patch));
             }
@@ -350,7 +351,7 @@ export function GuidesPanel() {
                 saveTabsToConfig(openedTabs, entry.id);
                 return;
             }
-            const guide = await window.api.readGuideFile(entry.filePath);
+            const guide = await trpcClient.guides.readFile.query({ filePath: entry.filePath });
             if (!guide) return;
             const newTab: OpenedTab = { guideId: entry.id, guide: guide as GuideFile, entry };
             const newTabs = [...openedTabs, newTab];
@@ -387,9 +388,9 @@ export function GuidesPanel() {
             if (!entry) {
                 if (!ganymedePath) return;
                 const guidesDir = deriveGuidesPath(ganymedePath);
-                const ok = await window.api.downloadGuideFromServer(guideId, guidesDir).catch(() => false);
+                const ok = await trpcClient.guides.downloadFromServer.mutate({ guideId, folderPath: guidesDir }).catch(() => false);
                 if (!ok) return;
-                const loaded = await window.api.readGuidesFolder(guidesDir).catch(() => []);
+                const loaded = await trpcClient.guides.readFolder.query({ folderPath: guidesDir }).catch(() => []);
                 setEntries(loaded as GuideEntry[]);
                 entry = (loaded as GuideEntry[]).find((e) => e.id === guideId);
                 if (!entry) return;
@@ -400,7 +401,7 @@ export function GuidesPanel() {
                 saveTabsToConfig(openedTabs, guideId);
                 return;
             }
-            const guide = await window.api.readGuideFile(entry.filePath);
+            const guide = await trpcClient.guides.readFile.query({ filePath: entry.filePath });
             if (!guide) return;
             const existingProgress = progresses.find((p) => p.id === guideId);
             const newTab: OpenedTab = { guideId, guide: guide as GuideFile, entry };
@@ -529,8 +530,8 @@ export function GuidesPanel() {
                     onChangeFolder={handlePickGanymedeFolder}
                     onEntriesChange={async () => {
                         if (!ganymedePath) return;
-                        const loaded = await window.api
-                            .readGuidesFolder(deriveGuidesPath(ganymedePath))
+                        const loaded = await trpcClient.guides.readFolder
+                            .query({ folderPath: deriveGuidesPath(ganymedePath) })
                             .catch(() => []);
                         setEntries(loaded as GuideEntry[]);
                     }}

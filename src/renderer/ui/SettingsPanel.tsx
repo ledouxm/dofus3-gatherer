@@ -25,6 +25,7 @@ import {
 import { useConfig, useMappings, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import type { ConfigStore } from "../providers/store";
 import { mapStore } from "../providers/store";
+import { trpcClient } from "../trpc";
 
 type ClickMode = "copy" | "travel";
 type WindowInfo = { title: string };
@@ -118,7 +119,7 @@ export const SettingsPanel = () => {
     const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
 
     const refresh = async (savedTitle?: string) => {
-        const wins = await window.api.getOpenWindows();
+        const wins = await trpcClient.windows.getOpenWindows.query();
         setWindows(wins);
         if (wins.length === 0) return;
         const target = savedTitle ? wins.find((w) => w.title === savedTitle) : null;
@@ -135,15 +136,13 @@ export const SettingsPanel = () => {
     };
 
     useEffect(() => {
-        window.api.getConfig().then((cfg) => {
-            refresh(cfg?.travel?.selectedWindowTitle);
-        });
+        refresh(config?.travel?.selectedWindowTitle);
     }, []);
 
     const selectWindow = (title: string | null) => {
         setSelectedTitle(title);
         mapStore.set((v) => ({ ...v, travelTitle: title }));
-        window.api.saveConfig({ travel: { ...config?.travel, selectedWindowTitle: title ?? undefined } });
+        trpcClient.config.save.mutate({ config: { travel: { ...config?.travel, selectedWindowTitle: title ?? undefined } } });
     };
 
     const setClickMode = (mode: ClickMode) => {
@@ -164,7 +163,7 @@ export const SettingsPanel = () => {
                         variant="ghost"
                         color="whiteAlpha.500"
                         _hover={{ color: "whiteAlpha.800", bg: "whiteAlpha.100" }}
-                        onClick={() => window.api.openUserDataFolder()}
+                        onClick={() => trpcClient.app.openUserDataFolder.mutate()}
                     >
                         <LuFolderOpen />
                         Ouvrir le dossier
@@ -242,7 +241,7 @@ export const SettingsPanel = () => {
                                 disabled={selectedTitle === null}
                                 onClick={() =>
                                     selectedTitle !== null &&
-                                    window.api.focusWindowAndSend(selectedTitle, "travel")
+                                    trpcClient.windows.focusWindowAndSend.mutate({ title: selectedTitle, action: "travel" })
                                 }
                                 bg="rgba(212,240,0,0.08)"
                                 color={

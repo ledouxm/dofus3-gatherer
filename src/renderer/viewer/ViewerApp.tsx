@@ -8,6 +8,7 @@ import { useMappings } from "../providers/ConfigProvider";
 import { VideoPlayer } from "./VideoPlayer";
 import { RecordingLibrary } from "./RecordingLibrary";
 import { useLiveLog } from "./useLiveLog";
+import { trpcClient } from "../trpc";
 
 type RightPanelTab = "live" | "packets";
 
@@ -65,11 +66,11 @@ export const ViewerApp = () => {
             }
             videoBase64 = btoa(binary);
         }
-        await window.api.exportRecording({ packets: recording.packets, videoBase64 });
+        await trpcClient.recordings.export.mutate({ packets: recording.packets, videoBase64 });
     }, [recording]);
 
     const handleImport = useCallback(async () => {
-        const data = await window.api.importRecording();
+        const data = await trpcClient.recordings.import.mutate();
         if (!data) return;
         const videoBuffer = data.videoBase64
             ? Uint8Array.from(atob(data.videoBase64), (c) => c.charCodeAt(0)).buffer

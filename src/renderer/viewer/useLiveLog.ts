@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { useCallback, useRef, useState, type MutableRefObject } from "react";
 import type { PacketEntry } from "./usePacketRecorder";
+import { trpc } from "../trpc";
 
 export type LivePacketEntry = PacketEntry & { arrivalTime: number };
 
@@ -15,9 +16,11 @@ export type LivePacketEntry = PacketEntry & { arrivalTime: number };
 export function useLiveLog(maxPackets = 500, recordingStartTime: number | null = null, frozenRef?: MutableRefObject<boolean>) {
     const [packets, setPackets] = useState<LivePacketEntry[]>([]);
     const sessionStart = useRef(Date.now());
+    const maxPacketsRef = useRef(maxPackets);
+    maxPacketsRef.current = maxPackets;
 
-    useEffect(() => {
-        const id = window.api.addListener("server-packet-broadcast", (_e: Electron.IpcRendererEvent, payload: { typeName: string; data: unknown }) => {
+    trpc.packets.onPacketBroadcast.useSubscription(undefined, {
+        onData: (payload) => {
             const now = Date.now();
             const entry: LivePacketEntry = {
                 typeName: payload.typeName,
@@ -27,12 +30,12 @@ export function useLiveLog(maxPackets = 500, recordingStartTime: number | null =
             };
             setPackets((prev) => {
                 const next = [...prev, entry];
-                if (frozenRef?.current) return next; // user scrolled up — don't evict
-                return next.length > maxPackets ? next.slice(next.length - maxPackets) : next;
+                if (frozenRef?.current) return next;
+                const max = maxPacketsRef.current;
+                return next.length > max ? next.slice(next.length - max) : next;
             });
-        });
-        return () => window.api.removeListener(id);
-    }, [maxPackets]);
+        },
+    });
 
     const recordingThresholdMs =
         recordingStartTime !== null ? recordingStartTime - sessionStart.current : null;

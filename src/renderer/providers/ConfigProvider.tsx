@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
 import { configStore, mapStore, type ConfigStore } from "./store";
 import { gameStore } from "../game/game-store";
+import { trpcClient } from "../trpc";
 
 export const useBaseUrl = () => useConfig().cdnBaseUrl;
 export const getBaseUrl = () => configStore.get().cdnBaseUrl;
@@ -30,7 +31,7 @@ export const ConfigProvider = ({ children }: PropsWithChildren) => {
     const configQuery = useQuery({
         queryKey: ["config"],
         queryFn: async () => {
-            const response = (await window.api.getConfig()) as Partial<ConfigStore>;
+            const response = (await trpcClient.config.get.query({ filename: "config.json" })) as Partial<ConfigStore>;
 
             const migratedMappings = migrateMappings(
                 (response.mappings ?? {}) as Record<string, unknown>,
@@ -87,9 +88,7 @@ export const useUpdateConfigMutation = () => {
                 ...newConfig,
             };
 
-            await window.api.saveConfig(updatedConfig, {
-                filename: "config.json",
-            });
+            await trpcClient.config.save.mutate({ config: updatedConfig, filename: "config.json" });
 
             configStore.set(updatedConfig);
 

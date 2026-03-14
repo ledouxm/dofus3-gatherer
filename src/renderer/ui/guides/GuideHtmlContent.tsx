@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { LuBookOpen, LuCheck } from "react-icons/lu";
 import { resolveTravelHandle } from "../../resolveTravelHandle";
 import { useClipboardToast } from "../useClipboardToast";
+import { trpcClient } from "../../trpc";
 
 const COORD_RE = /\[(-?\d+),\s*(-?\d+)\]/g;
 
@@ -12,7 +13,7 @@ function InlineCoordButton({ x, y, onCopy }: { x: number; y: number; onCopy: (te
     const travel = async () => {
         onCopy(`/travel ${x} ${y}`, `[${x},${y}]`);
         const handle = await resolveTravelHandle();
-        if (handle) window.api.focusWindowAndSend(handle, "travel");
+        if (handle) trpcClient.windows.focusWindowAndSend.mutate({ title: handle, action: "travel" });
     };
     return (
         <Box
@@ -166,7 +167,7 @@ export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavig
                             textDecoration="underline"
                             cursor={isExternal ? "pointer" : "default"}
                             onClick={() => {
-                                if (isExternal) window.api.openExternal(href);
+                                if (isExternal) trpcClient.app.openExternal.mutate({ url: href });
                             }}
                         >
                             {domToReact(el.children as DOMNode[], opts)}
@@ -189,7 +190,7 @@ export function GuideHtmlContent({ html, checkedBoxes, onCheckboxToggle, onNavig
                             my={2}
                             display="block"
                             cursor={isExternal ? "pointer" : "default"}
-                            onClick={() => isExternal && window.api.openExternal(src)}
+                            onClick={() => isExternal && trpcClient.app.openExternal.mutate({ url: src })}
                         />
                     );
                 }

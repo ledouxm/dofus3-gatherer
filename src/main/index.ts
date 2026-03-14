@@ -1,19 +1,20 @@
-import { app, BrowserWindow, clipboard, desktopCapturer, dialog, ipcMain } from "electron";
-import { getWindows, keyboard, Key } from "@nut-tree-fork/nut-js";
+import { app, BrowserWindow, dialog } from "electron";
 import { shell } from "electron/common";
 import path from "path";
 import { spawnSync, execSync } from "child_process";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
-import { getDb, getDofusVersion, makeDofusSqliteDb } from "./db";
+import { makeDofusSqliteDb } from "./db";
 import { makeSniffer } from "./sniffer/sniffer";
 import { initDofusProto } from "./init/dofus-proto";
 import protobuf from "protobufjs";
 import { promises as fs } from "fs";
 import { ofetch } from "ofetch";
 import { env } from "./env-vars";
-
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
+import { startTrpcServer } from "./trpc/wsServer";
+import { serverContext } from "./trpc/serverContext";
+import { packetEmitter } from "./trpc/packetEmitter";
+import { updateStep } from "./trpc/initState";
+import { setAppRouterCallbacks } from "./trpc/routers/app";
 
 async function readMainConfig(configDir: string): Promise<any> {
     const configPath = path.join(configDir, "config.json");
@@ -69,30 +70,6 @@ async function syncLatestMappings(
     }
 }
 
-async function fetchRecoltable(cdnBaseUrl: string, resource: string): Promise<any[]> {
-    const url = `${cdnBaseUrl}/recoltables/recoltables-${resource}.json`;
-    const result = await ofetch(url).catch(() => null);
-    return result?.data ?? null;
-}
-
-async function getCachedRecoltables(cacheDir: string, resourceId: string): Promise<any[] | null> {
-    const cachePath = path.join(cacheDir, `recoltables2-${resourceId}.json`);
-    try {
-        const raw = await fs.readFile(cachePath, "utf-8");
-        const { timestamp, data } = JSON.parse(raw);
-        if (Date.now() - timestamp < CACHE_TTL_MS) return data;
-    } catch {}
-    return null;
-}
-
-async function setCachedRecoltables(
-    cacheDir: string,
-    resourceId: string,
-    data: any[],
-): Promise<void> {
-    const cachePath = path.join(cacheDir, `recoltables2-${resourceId}.json`);
-    await fs.writeFile(cachePath, JSON.stringify({ timestamp: Date.now(), data }), "utf-8");
-}
 function createTravelWindow(): BrowserWindow {
     const win = new BrowserWindow({
         width: 320,
@@ -110,7 +87,7 @@ function createTravelWindow(): BrowserWindow {
     if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
         win.loadURL(process.env["ELECTRON_RENDERER_URL"] + "/travel-window.html");
     } else {
-        win.loadFile(path.join(__dirname, "../renderer/travel-window.html"));
+        win.loadURL("http://localhost:8765/travel-window.html");
     }
     return win;
 }
@@ -162,13 +139,10 @@ async function createWindow(configDir: string) {
         }
     }, 1000);
 
-    // HMR for renderer base on electron-vite cli.
-    // Load the remote URL for development or the local html file for production.
     if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-        console.log(process.env["ELECTRON_RENDERER_URL"]);
         mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
     } else {
-        mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+        mainWindow.loadURL("http://localhost:8765");
     }
 
     return mainWindow;
@@ -189,8 +163,6 @@ function ensureNpcap() {
     }
 }
 
-type InitStepStatus = "pending" | "running" | "done" | "error";
-type InitStep = { id: string; label: string; status: InitStepStatus; progress?: number };
 
 app.whenReady().then(async () => {
     ensureNpcap();
@@ -223,17 +195,9 @@ app.whenReady().then(async () => {
     await fs.mkdir(cacheDir, { recursive: true }).catch(() => {});
     await fs.mkdir(recordingsDir, { recursive: true }).catch(() => {});
 
-    function resolveRecordingPath(filename: string): string {
-        if (
-            !filename.endsWith(".dfrec") ||
-            filename.includes("/") ||
-            filename.includes("\\") ||
-            filename.includes("..")
-        ) {
-            throw new Error(`Invalid recording filename: "${filename}"`);
-        }
-        return path.join(recordingsDir, filename);
-    }
+    serverContext.configDir = configDir;
+    serverContext.cacheDir = cacheDir;
+    serverContext.recordingsDir = recordingsDir;
 
     // Ensure config.json exists on first run
     const existingConfig = await readMainConfig(configDir);
@@ -264,256 +228,31 @@ app.whenReady().then(async () => {
 
     // Travel window (singleton)
     let travelWindow: BrowserWindow | null = null;
-    ipcMain.handle("open-travel-window", () => {
+    serverContext.travelWindow = null;
+    const openTravelWindow = () => {
         if (travelWindow && !travelWindow.isDestroyed()) {
             travelWindow.focus();
             return;
         }
         travelWindow = createTravelWindow();
-        travelWindow.on("closed", () => { travelWindow = null; });
-    });
-
-    // Start mappings sync in background (non-blocking)
-    const cdnBaseUrl = existingConfig.cdnBaseUrl || env.VITE_CDN_BASE_URL || "";
-    const mappingsSyncPromise = syncLatestMappings(configDir, cdnBaseUrl);
-
-    // Register IPC handlers up front (sql is guarded by getDb() throwing if not ready)
-    ipcMain.handle("get-mappings-sync-result", () => mappingsSyncPromise);
-    ipcMain.handle("get-app-version", () => app.getVersion());
-    ipcMain.handle("open-external", (_event, url: string) => shell.openExternal(url));
-    ipcMain.handle("open-user-data-folder", () => shell.openPath(process.env.USER_DATA_PATH!));
-    ipcMain.handle("sql", (_event, query) => getDb().executeQuery(query));
-    ipcMain.handle("toggle-always-on-top", async () => {
-        const mainWin = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
-        const newState = !mainWin.isAlwaysOnTop();
-        mainWin.setAlwaysOnTop(newState);
-        const config = await readMainConfig(configDir);
-        await writeMainConfig(configDir, { ...config, alwaysOnTop: newState });
-        return newState;
-    });
-    ipcMain.handle("get-always-on-top", () => {
-        const mainWin = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
-        return mainWin.isAlwaysOnTop();
-    });
-    ipcMain.on("minimize-window", (event) => {
-        BrowserWindow.fromWebContents(event.sender)?.minimize();
-    });
-    ipcMain.on("close-window", (event) => {
-        BrowserWindow.fromWebContents(event.sender)?.close();
-    });
-    ipcMain.handle("get-recoltables", async (_event, resourceId: string) => {
-        const config = await readMainConfig(configDir);
-        const cdnBaseUrl = config.cdnBaseUrl || env.VITE_CDN_BASE_URL;
-        if (!cdnBaseUrl) return null;
-        const cached = await getCachedRecoltables(cacheDir, resourceId);
-        if (cached) return cached;
-        const data = await fetchRecoltable(cdnBaseUrl, resourceId);
-        if (data) await setCachedRecoltables(cacheDir, resourceId, data);
-        return data;
-    });
-
-    // In-memory recording storage shared between windows (kept for legacy compat)
-    let currentRecording: { packets: unknown[]; videoBuffer: ArrayBuffer | null } | null = null;
-    ipcMain.handle("save-recording", (_event, data) => {
-        currentRecording = data;
-    });
-    ipcMain.handle("get-recording", () => currentRecording);
-
-    // Disk-based recording storage
-    ipcMain.handle(
-        "save-recording-to-disk",
-        async (_event, data: { packets: { relativeMs: number }[]; videoBase64: string | null; name?: string }) => {
-            const filename = `recording-${Date.now()}.dfrec`;
-            const filePath = path.join(recordingsDir, filename);
-            const durationMs = data.packets.length > 0 ? Math.max(0, ...data.packets.map((p) => p.relativeMs)) : 0;
-            const record = {
-                packets: data.packets,
-                videoBase64: data.videoBase64,
-                metadata: {
-                    name: data.name ?? `Recording ${new Date().toLocaleString()}`,
-                    createdAt: new Date().toISOString(),
-                    durationMs,
-                },
-            };
-            await fs.writeFile(filePath, JSON.stringify(record), "utf-8");
-            return filename;
-        },
-    );
-
-    ipcMain.handle("list-recordings", async () => {
-        try {
-            const files = await fs.readdir(recordingsDir);
-            const results: { filename: string; metadata: { name: string; createdAt: string; durationMs: number } }[] = [];
-            for (const file of files) {
-                if (!file.endsWith(".dfrec")) continue;
-                try {
-                    const raw = await fs.readFile(path.join(recordingsDir, file), "utf-8");
-                    const parsed = JSON.parse(raw);
-                    if (parsed?.metadata) {
-                        results.push({ filename: file, metadata: parsed.metadata });
-                    }
-                } catch {}
-            }
-            results.sort((a, b) => new Date(b.metadata.createdAt).getTime() - new Date(a.metadata.createdAt).getTime());
-            return results;
-        } catch {
-            return [];
-        }
-    });
-
-    ipcMain.handle("load-recording-from-disk", async (_event, filename: string) => {
-        const filePath = resolveRecordingPath(filename);
-        try {
-            const raw = await fs.readFile(filePath, "utf-8");
-            return JSON.parse(raw);
-        } catch {
-            return null;
-        }
-    });
-
-    ipcMain.handle("delete-recording", async (_event, filename: string) => {
-        const filePath = resolveRecordingPath(filename);
-        await fs.unlink(filePath);
-        return true;
-    });
-
-    ipcMain.handle("update-recording-metadata", async (_event, filename: string, updates: { name?: string }) => {
-        const filePath = resolveRecordingPath(filename);
-        const raw = await fs.readFile(filePath, "utf-8");
-        const parsed = JSON.parse(raw);
-        parsed.metadata = { ...parsed.metadata, ...updates };
-        await fs.writeFile(filePath, JSON.stringify(parsed), "utf-8");
-        return true;
-    });
-
-    ipcMain.handle(
-        "export-recording",
-        async (_event, data: { packets: unknown[]; videoBase64: string | null }) => {
-            const { filePath } = await dialog.showSaveDialog({
-                title: "Save Recording",
-                defaultPath: `recording-${Date.now()}.dfrec`,
-                filters: [{ name: "Dofus Recording", extensions: ["dfrec"] }],
-            });
-            if (!filePath) return false;
-            await fs.writeFile(filePath, JSON.stringify(data), "utf-8");
-            return true;
-        },
-    );
-
-    ipcMain.handle("import-recording", async () => {
-        const { filePaths } = await dialog.showOpenDialog({
-            title: "Load Recording",
-            filters: [{ name: "Dofus Recording", extensions: ["dfrec"] }],
-            properties: ["openFile"],
-        });
-        if (!filePaths[0]) return null;
-        const raw = await fs.readFile(filePaths[0], "utf-8");
-        return JSON.parse(raw);
-    });
-
-    ipcMain.handle("pick-ganymede-folder", async () => {
-        const { filePaths, canceled } = await dialog.showOpenDialog({
-            title: "Sélectionner le dossier Ganymede",
-            properties: ["openDirectory"],
-        });
-        return canceled || !filePaths[0] ? null : filePaths[0];
-    });
-
-    ipcMain.handle("get-default-ganymede-path", async () => {
-        const appData = app.getPath("appData");
-        const candidate = path.join(appData, "com.ganymede.ganymede-app");
-        try {
-            await fs.access(path.join(candidate, "conf.json"));
-            return candidate;
-        } catch {
-            return null;
-        }
-    });
-
-    const GANYMEDE_API = "https://ganymede-app.com/api";
-
-    ipcMain.handle("fetch-guides-from-server", async (_e, status: string) => {
-        const url = status
-            ? `${GANYMEDE_API}/v2/guides?status=${status}`
-            : `${GANYMEDE_API}/v2/guides`;
-        return ofetch(url, { headers: { "User-Agent": "dofus3-gatherer" } });
-    });
-
-    ipcMain.handle("download-guide-from-server", async (_e, guideId: number, folderPath: string) => {
-        const guide = await ofetch(`${GANYMEDE_API}/v2/guides/${guideId}`, {
-            headers: { "User-Agent": "dofus3-gatherer" },
-        });
-        const dest = path.join(folderPath, `${guideId}.json`);
-        await fs.writeFile(dest, JSON.stringify(guide, null, 2), "utf-8");
-        return true;
-    });
-
-    ipcMain.handle("get-desktop-sources", () =>
-        desktopCapturer.getSources({ types: ["window", "screen"] }),
-    );
-
-    ipcMain.handle("get-open-windows", async () => {
-        const wins = await getWindows();
-        const withTitles = await Promise.all(wins.map(async (w) => ({ title: await w.title })));
-        return withTitles.filter((w) => w.title && w.title.trim() !== "");
-    });
-
-    ipcMain.handle(
-        "focus-window-and-send",
-        async (_event, { title, action }: { title: string; action: "H" | "travel" }) => {
-            const wins = await getWindows();
-            const entries = await Promise.all(wins.map(async (w) => ({ win: w, title: await w.title })));
-            keyboard.config.autoDelayMs = 20;
-            
-            const target = entries.find((e) => e.title === title);
-            if (!target) throw new Error(`Window not found: ${title}`);
-            await target.win.focus();
-
-            await new Promise((r) => setTimeout(r, 150));
-
-            if (action === "H") {
-                await keyboard.type(Key.H);
-            } else if (action === "travel") {
-                const clipText = clipboard.readText().trim();
-                const travelText = clipText.startsWith("/travel") ? clipText : null;
-                if (!travelText) {
-                    throw new Error("Clipboard does not contain a valid /travel command");
-                }
-                await keyboard.type(Key.Space);
-                await new Promise((r) => setTimeout(r, 200));
-                await keyboard.type(travelText, );
-                await keyboard.type(Key.Return);
-            }
-
-        },
-    );
-
-    const steps: InitStep[] = [
-        { id: "sqlite", label: "Downloading database", status: "running" },
-        { id: "proto", label: "Downloading proto definitions", status: "running" },
-    ];
-
-    ipcMain.handle("get-init-status", () => steps);
-
-    ipcMain.handle("get-dofus-version", () => getDofusVersion());
-
-    ipcMain.handle("get-admin-token", async () => {
-        const filePath = path.join(app.getPath("userData"), ".dofus-gatherer-admin");
-        try {
-            const content = await fs.readFile(filePath, "utf-8");
-            return content.trim() || null;
-        } catch {
-            return null;
-        }
-    });
-
-    const updateStep = (id: string, update: Partial<InitStep>) => {
-        const step = steps.find((s) => s.id === id)!;
-        Object.assign(step, update);
-        BrowserWindow.getAllWindows().forEach((w) => {
-            if (!w.isDestroyed()) w.webContents.send("init-status", [...steps]);
+        serverContext.travelWindow = travelWindow;
+        travelWindow.on("closed", () => {
+            travelWindow = null;
+            serverContext.travelWindow = null;
         });
     };
+    // Start mappings sync in background (non-blocking)
+    const cdnBaseUrl = existingConfig.cdnBaseUrl || env.VITE_CDN_BASE_URL || "";
+    serverContext.cdnBaseUrl = cdnBaseUrl;
+    const mappingsSyncPromise = syncLatestMappings(configDir, cdnBaseUrl);
+
+    setAppRouterCallbacks({
+        openTravelWindow,
+        getMappingsSyncResult: () => mappingsSyncPromise,
+    });
+
+    // Start tRPC WebSocket server
+    await startTrpcServer(is.dev ? undefined : path.join(__dirname, "../renderer"));
 
     const windowPromise = createWindow(configDir);
 
@@ -612,15 +351,8 @@ app.whenReady().then(async () => {
                         data._raw = Buffer.from(rawBytes).toString("hex");
                         const packetPayload = { typeName, data };
                         console.log(typeName);
-                        BrowserWindow.getAllWindows().forEach((w) => {
-                            if (w.isDestroyed() || w.webContents.isDestroyed()) return;
-                            try {
-                                w.webContents.send("server-packet/" + typeName, packetPayload);
-                                w.webContents.send("server-packet-broadcast", packetPayload);
-                            } catch {
-                                // Window may be closing
-                            }
-                        });
+                        packetEmitter.emit("packet", packetPayload);
+                        packetEmitter.emit("packet/" + typeName, packetPayload);
                     }
                 } catch (e) {
                     console.log(

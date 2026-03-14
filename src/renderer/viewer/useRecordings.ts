@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { RecordingMeta } from "./usePacketRecorder";
+import { trpcClient } from "../trpc";
 
 const FAVORITES_FILENAME = "recordings-favorites.json";
 
@@ -12,8 +13,8 @@ export const useRecordings = () => {
         setLoading(true);
         try {
             const [recs, favsConfig] = await Promise.all([
-                window.api.listRecordings(),
-                window.api.getConfig({ filename: FAVORITES_FILENAME }),
+                trpcClient.recordings.list.query(),
+                trpcClient.config.get.query({ filename: FAVORITES_FILENAME }),
             ]);
             setRecordings(recs);
             setFavorites((favsConfig as { favorites?: string[] })?.favorites ?? []);
@@ -39,7 +40,7 @@ export const useRecordings = () => {
 
     const saveFavorites = useCallback(async (next: string[]) => {
         setFavorites(next);
-        await window.api.saveConfig({ favorites: next }, { filename: FAVORITES_FILENAME });
+        await trpcClient.config.save.mutate({ config: { favorites: next }, filename: FAVORITES_FILENAME });
     }, []);
 
     const toggleFavorite = useCallback(
@@ -77,7 +78,7 @@ export const useRecordings = () => {
 
     const deleteRecording = useCallback(
         async (filename: string) => {
-            await window.api.deleteRecording(filename);
+            await trpcClient.recordings.delete.mutate({ filename });
             if (favorites.includes(filename)) {
                 await saveFavorites(favorites.filter((f) => f !== filename));
             }
@@ -87,7 +88,7 @@ export const useRecordings = () => {
     );
 
     const renameRecording = useCallback(async (filename: string, name: string) => {
-        await window.api.updateRecordingMetadata(filename, { name });
+        await trpcClient.recordings.updateMetadata.mutate({ filename, updates: { name } });
         await refresh();
     }, [refresh]);
 

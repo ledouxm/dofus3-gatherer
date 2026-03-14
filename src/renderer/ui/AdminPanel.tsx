@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { LuUpload } from "react-icons/lu";
 import { getBaseUrl } from "../providers/ConfigProvider";
 import { configStore } from "../providers/store";
+import { trpcClient } from "../trpc";
 
 interface LatestMappings {
     timestamp: string;
@@ -13,7 +14,7 @@ export const AdminPanel = ({ token }: { token: string }) => {
     const [version, setVersion] = useState("");
 
     useEffect(() => {
-        window.api.getDofusVersion().then((v) => { if (v) setVersion(v); });
+        trpcClient.app.getDofusVersion.query().then((v) => { if (v) setVersion(v); });
     }, []);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);

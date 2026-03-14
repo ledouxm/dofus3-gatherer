@@ -1,5 +1,6 @@
 import { Box, HStack, Input, Spinner, Text } from "@chakra-ui/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { trpcClient } from "../../trpc";
 import { useCallback, useState } from "react";
 import { LuChevronRight, LuDownload, LuFolderOpen, LuRefreshCw } from "react-icons/lu";
 import type { GuideEntry, GuideProgress } from "./types";
@@ -59,7 +60,7 @@ export function GuideList({ entries, progresses, profileName, folderPath, onSele
     const serverGuidesQuery = useQuery<ServerGuide[], Error>({
         queryKey: ["ganymede-guides", downloadStatus],
         queryFn: async () => {
-            const result = await window.api.fetchGuidesFromServer(downloadStatus);
+            const result = await trpcClient.guides.fetchFromServer.query({ status: downloadStatus });
             if (!Array.isArray(result)) throw new Error("Réponse inattendue du serveur");
             return result;
         },
@@ -72,7 +73,7 @@ export function GuideList({ entries, progresses, profileName, folderPath, onSele
         mutationFn: async (guide: ServerGuide) => {
             if (!folderPath) throw new Error("Aucun dossier sélectionné");
             const guidesDir = folderPath.replace(/[\\/]$/, "") + "/guides";
-            await window.api.downloadGuideFromServer(guide.id, guidesDir);
+            await trpcClient.guides.downloadFromServer.mutate({ guideId: guide.id, folderPath: guidesDir });
             return guide.id;
         },
         onSuccess: async (guideId) => {

@@ -1,4 +1,6 @@
 import { Box, HStack, IconButton, Tooltip } from "@chakra-ui/react";
+import { trpcClient } from "../trpc";
+import { isElectron } from "../isElectron";
 import React, { useEffect, useState } from "react";
 import {
     LuBookOpen,
@@ -52,11 +54,11 @@ export const TitleBar = ({
     const [isPinned, setIsPinned] = useState(false);
 
     useEffect(() => {
-        window.api.getAlwaysOnTop().then(setIsPinned);
+        trpcClient.app.getAlwaysOnTop.query().then(setIsPinned);
     }, []);
 
     const handlePin = async () => {
-        const newState = await window.api.toggleAlwaysOnTop();
+        const newState = await trpcClient.app.toggleAlwaysOnTop.mutate();
         setIsPinned(newState);
     };
 
@@ -183,30 +185,32 @@ export const TitleBar = ({
                     })}
                 </HStack>
 
-                {/* Window controls */}
+                {/* Window controls — Electron only */}
                 <HStack gap={0} alignItems="center" flex={1} justifyContent="flex-end">
-                    <HStack gap={0} style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-                        <IconButton
-                            aria-label="Minimize"
-                            size="xs"
-                            variant="ghost"
-                            color="whiteAlpha.600"
-                            _hover={{ color: "white", bg: "whiteAlpha.100" }}
-                            onClick={() => window.api.minimizeWindow()}
-                        >
-                            <LuMinus />
-                        </IconButton>
-                        <IconButton
-                            aria-label="Close"
-                            size="xs"
-                            variant="ghost"
-                            color="whiteAlpha.600"
-                            _hover={{ color: "white", bg: "red.600" }}
-                            onClick={() => window.api.closeWindow()}
-                        >
-                            <LuX />
-                        </IconButton>
-                    </HStack>
+                    {isElectron() && (
+                        <HStack gap={0} style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+                            <IconButton
+                                aria-label="Minimize"
+                                size="xs"
+                                variant="ghost"
+                                color="whiteAlpha.600"
+                                _hover={{ color: "white", bg: "whiteAlpha.100" }}
+                                onClick={() => trpcClient.app.minimizeWindow.mutate()}
+                            >
+                                <LuMinus />
+                            </IconButton>
+                            <IconButton
+                                aria-label="Close"
+                                size="xs"
+                                variant="ghost"
+                                color="whiteAlpha.600"
+                                _hover={{ color: "white", bg: "red.600" }}
+                                onClick={() => trpcClient.app.closeWindow.mutate()}
+                            >
+                                <LuX />
+                            </IconButton>
+                        </HStack>
+                    )}
                 </HStack>
             </HStack>
         </Box>

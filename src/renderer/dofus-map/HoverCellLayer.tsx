@@ -14,6 +14,7 @@ import { getItemIconUrl } from "../resources/ResourcesList";
 import { mapStore } from "../providers/store";
 import { useConfig } from "../providers/ConfigProvider";
 import { toaster } from "../ui/toaster";
+import { trpcClient } from "../trpc";
 import { resolveTravelHandle } from "../resolveTravelHandle";
 
 const TRAVEL_CURSOR = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='32' viewBox='0 0 24 32'%3E%3Cpath d='M12 0 C5.4 0 0 5.4 0 12 C0 20 12 32 12 32 C12 32 24 20 24 12 C24 5.4 18.6 0 12 0Z' fill='black' stroke='white' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='4' fill='white'/%3E%3C/svg%3E") 12 32, pointer`;
@@ -81,7 +82,7 @@ export function HoverCellLayer({ meta, recoltables, iconsByResourceId }: Props) 
             const handle = await resolveTravelHandle();
             if (handle !== null) {
                 navigator.clipboard.writeText(text);
-                window.api.focusWindowAndSend(handle, "travel");
+                trpcClient.windows.focusWindowAndSend.mutate({ title: handle, action: "travel" });
                 if (lastToastId.current) toaster.dismiss(lastToastId.current);
                 lastToastId.current = toaster.create({
                     title: <>Voyage vers <b>[{Math.floor(c.posX)}, {Math.floor(c.posY)}]</b></>,

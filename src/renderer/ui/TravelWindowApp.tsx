@@ -9,6 +9,7 @@ import {
 } from "react-icons/lu";
 import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
 import { mapStore } from "../providers/store";
+import { trpcClient } from "../trpc";
 
 type ClickMode = "copy" | "travel";
 type WindowInfo = { title: string };
@@ -20,11 +21,11 @@ const TravelTitleBar = () => {
     const [isPinned, setIsPinned] = useState(false);
 
     useEffect(() => {
-        window.api.getAlwaysOnTop().then(setIsPinned);
+        trpcClient.app.getAlwaysOnTop.query().then(setIsPinned);
     }, []);
 
     const handlePin = async () => {
-        const newState = await window.api.toggleAlwaysOnTop();
+        const newState = await trpcClient.app.toggleAlwaysOnTop.mutate();
         setIsPinned(newState);
     };
 
@@ -95,7 +96,7 @@ const TravelTitleBar = () => {
                             variant="ghost"
                             color="whiteAlpha.600"
                             _hover={{ color: "white", bg: "whiteAlpha.100" }}
-                            onClick={() => window.api.minimizeWindow()}
+                            onClick={() => trpcClient.app.minimizeWindow.mutate()}
                         >
                             <LuMinus />
                         </IconButton>
@@ -105,7 +106,7 @@ const TravelTitleBar = () => {
                             variant="ghost"
                             color="whiteAlpha.600"
                             _hover={{ color: "white", bg: "red.600" }}
-                            onClick={() => window.api.closeWindow()}
+                            onClick={() => trpcClient.app.closeWindow.mutate()}
                         >
                             <LuX />
                         </IconButton>
@@ -127,7 +128,7 @@ export const TravelWindowApp = () => {
     const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
 
     const refresh = async (savedTitle?: string) => {
-        const wins = await window.api.getOpenWindows();
+        const wins = await trpcClient.windows.getOpenWindows.query();
         setWindows(wins);
         if (wins.length === 0) return;
         const target = savedTitle ? wins.find((w) => w.title === savedTitle) : null;
@@ -144,15 +145,13 @@ export const TravelWindowApp = () => {
     };
 
     useEffect(() => {
-        window.api.getConfig().then((cfg) => {
-            refresh(cfg?.travel?.selectedWindowTitle);
-        });
+        refresh(config?.travel?.selectedWindowTitle);
     }, []);
 
     const selectWindow = (title: string | null) => {
         setSelectedTitle(title);
         mapStore.set((v) => ({ ...v, travelTitle: title }));
-        window.api.saveConfig({ travel: { ...config?.travel, selectedWindowTitle: title ?? undefined } });
+        trpcClient.config.save.mutate({ config: { travel: { ...config?.travel, selectedWindowTitle: title ?? undefined } } });
     };
 
     const setClickMode = (mode: ClickMode) => {
@@ -221,7 +220,7 @@ export const TravelWindowApp = () => {
                         disabled={selectedTitle === null}
                         onClick={() =>
                             selectedTitle !== null &&
-                            window.api.focusWindowAndSend(selectedTitle, "travel")
+                            trpcClient.windows.focusWindowAndSend.mutate({ title: selectedTitle, action: "travel" })
                         }
                         bg="rgba(212,240,0,0.08)"
                         color={selectedTitle !== null ? ACTIVE_COLOR : "rgba(255,255,255,0.3)"}

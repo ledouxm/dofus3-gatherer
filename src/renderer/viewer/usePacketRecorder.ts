@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { trpc, trpcClient } from "../trpc";
 
 export type PacketEntry = {
     typeName: string;
@@ -54,8 +55,9 @@ export const usePacketRecorder = () => {
     const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const isRecordingRef = useRef(false);
 
-    const packetHandler = useCallback(
-        (_event: Electron.IpcRendererEvent, payload: { typeName: string; data: unknown }) => {
+    // Register subscription once on mount — reads isRecordingRef to gate collection
+    trpc.packets.onPacketBroadcast.useSubscription(undefined, {
+        onData: (payload) => {
             if (!isRecordingRef.current) return;
             packetsRef.current.push({
                 typeName: payload.typeName,
@@ -63,40 +65,28 @@ export const usePacketRecorder = () => {
                 relativeMs: Date.now() - startTimeRef.current,
             });
         },
-        [],
-    );
+    });
 
-    // Register once on mount, deregister on unmount — prevents listener accumulation
-    useEffect(() => {
-        const id = window.api.addListener("server-packet-broadcast", packetHandler);
-        return () => { window.api.removeListener(id); };
-    }, [packetHandler]);
+    const start = useCallback(async (stream: MediaStream) => {
+        packetsRef.current = [];
+        chunksRef.current = [];
+        startTimeRef.current = Date.now();
+        isRecordingRef.current = true;
+        setRecordingStartTime(startTimeRef.current);
+        setDuration(0);
+        setStatus("recording");
 
-    const start = useCallback(
-        async (stream: MediaStream) => {
-            packetsRef.current = [];
-            chunksRef.current = [];
-            startTimeRef.current = Date.now();
-            isRecordingRef.current = true;
-            setRecordingStartTime(startTimeRef.current);
-            setDuration(0);
-            setStatus("recording");
+        const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp8" });
+        mediaRecorderRef.current = recorder;
+        recorder.ondataavailable = (e) => {
+            if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+        recorder.start(100);
 
-            // Start screen recording
-            const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp8" });
-            mediaRecorderRef.current = recorder;
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunksRef.current.push(e.data);
-            };
-            recorder.start(100); // collect chunks every 100ms
-
-            // Duration ticker
-            tickRef.current = setInterval(() => {
-                setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
-            }, 1000);
-        },
-        [packetHandler],
-    );
+        tickRef.current = setInterval(() => {
+            setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
+        }, 1000);
+    }, []);
 
     const stop = useCallback(async (): Promise<Recording & { savedFilename: string }> => {
         setStatus("processing");
@@ -115,7 +105,7 @@ export const usePacketRecorder = () => {
             const packets = [...packetsRef.current];
             if (!recorder || recorder.state === "inactive") {
                 const recording: Recording = { startTime: 0, packets, videoBuffer: null };
-                window.api.saveRecordingToDisk({ packets: recording.packets, videoBase64: null }).then((savedFilename) => {
+                trpcClient.recordings.saveToDisk.mutate({ packets: recording.packets, videoBase64: null }).then((savedFilename) => {
                     setStatus("done");
                     resolve({ ...recording, savedFilename });
                 });
@@ -127,7 +117,7 @@ export const usePacketRecorder = () => {
                 const videoBuffer = await blob.arrayBuffer();
                 const videoBase64 = arrayBufferToBase64(videoBuffer);
                 const recording: Recording = { startTime: 0, packets, videoBuffer };
-                const savedFilename = await window.api.saveRecordingToDisk({ packets, videoBase64 });
+                const savedFilename = await trpcClient.recordings.saveToDisk.mutate({ packets, videoBase64 });
                 setStatus("done");
                 resolve({ ...recording, savedFilename });
             };

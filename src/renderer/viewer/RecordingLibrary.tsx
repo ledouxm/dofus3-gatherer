@@ -9,6 +9,7 @@ import {
     LuTrash2,
 } from "react-icons/lu";
 import { useConfig } from "../providers/ConfigProvider";
+import { trpcClient } from "../trpc";
 import type { PacketEntry, RecorderStatus, RecordingMeta } from "./usePacketRecorder";
 import {
     formatDuration,
@@ -17,7 +18,7 @@ import {
 } from "./usePacketRecorder";
 import { useRecordings } from "./useRecordings";
 
-type Source = Electron.DesktopCapturerSource;
+type Source = { id: string; name: string; thumbnail?: unknown };
 
 interface RecordingLibraryProps {
     onLoad: (recording: Recording & { filename: string }) => void;
@@ -40,7 +41,7 @@ export const RecordingLibrary = ({ onLoad, activeFilename, status, duration, sta
     const isProcessing = status === "processing";
 
     useEffect(() => {
-        window.api.getDesktopSources().then((srcs) => {
+        trpcClient.windows.getDesktopSources.query().then((srcs) => {
             setSources(srcs);
             if (srcs.length === 0) return;
             const savedTitle = config?.travel?.selectedWindowTitle;
@@ -81,7 +82,7 @@ export const RecordingLibrary = ({ onLoad, activeFilename, status, duration, sta
     }, [stop, stream, refresh, onLoad]);
 
     const handleSelect = useCallback(async (meta: RecordingMeta) => {
-        const data = await window.api.loadRecordingFromDisk(meta.filename);
+        const data = await trpcClient.recordings.loadFromDisk.query({ filename: meta.filename });
         if (!data) return;
         const videoBuffer = data.videoBase64
             ? Uint8Array.from(atob(data.videoBase64), (c) => c.charCodeAt(0)).buffer

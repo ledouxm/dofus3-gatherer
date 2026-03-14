@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
 import { db } from "../../db";
 import { resolveTravelHandle } from "../../resolveTravelHandle";
+import { trpcClient } from "../../trpc";
 import { useClipboardToast } from "../useClipboardToast";
 import { GuideHtmlContent } from "./GuideHtmlContent";
 import type { GuideEntry, GuideFile, GuideProgress } from "./types";
@@ -25,7 +26,7 @@ function MapCoordsButton({ x, y }: { x: number; y: number }) {
     const travel = async () => {
         copy(`/travel ${x} ${y}`, `[${x},${y}]`);
         const handle = await resolveTravelHandle();
-        if (handle) window.api.focusWindowAndSend(handle, "travel");
+        if (handle) trpcClient.windows.focusWindowAndSend.mutate({ title: handle, action: "travel" });
     };
     return (
         <Box

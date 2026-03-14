@@ -10,13 +10,14 @@ import {
     DatabaseIntrospector,
 } from "kysely";
 import { DB } from "src/main/dofus";
+import { trpcClient } from "./trpc";
 
 class RpcDriver implements Driver {
     async init() {}
     async acquireConnection(): Promise<DatabaseConnection> {
         return {
             async executeQuery<R>(compiledQuery: CompiledQuery): Promise<QueryResult<R>> {
-                return await window.api.sql<R>(compiledQuery);
+                return await trpcClient.db.sql.mutate(compiledQuery as any) as QueryResult<R>;
             },
             async *streamQuery() {
                 throw new Error("Streaming not supported");

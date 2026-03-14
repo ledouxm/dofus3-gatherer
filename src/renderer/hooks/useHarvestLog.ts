@@ -1,6 +1,7 @@
 import { useMappings } from "../providers/ConfigProvider";
 import { useDofusEvent } from "../useDofusEvent";
 import { gameStore } from "../game/game-store";
+import { trpcClient } from "../trpc";
 
 function getFieldValue(data: Record<string, unknown>, path: string): unknown {
     return path.split(".").reduce((obj, key) => (obj as Record<string, unknown>)?.[key], data as unknown);
@@ -19,7 +20,7 @@ export const useHarvestLog = (onAppended?: () => void) => {
         const quantityPath = mappings["ObjetHarvestedEvent.quantity"];
         const quantity = quantityPath ? Number(getFieldValue(packet.data, quantityPath)) || 1 : 1;
 
-        await window.api.appendHarvestEntry({
+        await trpcClient.config.appendHarvestEntry.mutate({
             resourceId,
             quantity,
             mapId: gameStore.get().character?.mapId ?? null,
@@ -41,7 +42,7 @@ export const useHarvestLog = (onAppended?: () => void) => {
         const bonusPath = mappings["ObjectHarvestedWithBonusEvent.bonusQuantity"];
         const bonus = bonusPath ? Number(getFieldValue(packet.data, bonusPath)) || 0 : 0;
 
-        await window.api.appendHarvestEntry({
+        await trpcClient.config.appendHarvestEntry.mutate({
             resourceId,
             quantity: quantity + bonus,
             mapId: gameStore.get().character?.mapId ?? null,

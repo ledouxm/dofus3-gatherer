@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { trpcClient } from "./trpc";
 
 interface UpdateInfo {
     latestVersion: string;
@@ -15,7 +16,7 @@ export function useUpdateCheck(): UpdateInfo | null {
         async function check() {
             if (import.meta.env.DEV) return;
             try {
-                const currentVersion = await window.api.getAppVersion();
+                const currentVersion = await trpcClient.app.getVersion.query();
                 const release = await fetch(
                     `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
                     { headers: { Accept: "application/vnd.github+json" } },

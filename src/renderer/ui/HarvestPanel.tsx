@@ -12,6 +12,7 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
+import { trpcClient } from "../trpc";
 import { useResourcesQuery } from "../resources/useResourcesQuery";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -134,7 +135,7 @@ export const HarvestPanel = () => {
 
     const { data: log = [] } = useQuery({
         queryKey: ["harvest-log"],
-        queryFn: () => window.api.readHarvestLog(),
+        queryFn: () => trpcClient.config.readHarvestLog.query(),
         refetchOnWindowFocus: true,
     });
 

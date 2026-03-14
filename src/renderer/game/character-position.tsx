@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useMappings } from "../providers/ConfigProvider";
+import { trpcClient } from "../trpc";
 import { useDofusEvent } from "../useDofusEvent";
 import { useState } from "react";
 import { db } from "../db";
@@ -68,7 +69,7 @@ export const CharacterPosition = ({ meta }: { meta: WorldmapMeta }) => {
 
             gameStore.set((state) => ({ ...state, character: characterPosition }));
 
-            window.api.saveConfig({ characterPosition });
+            trpcClient.config.save.mutate({ config: { characterPosition } });
         }
     });
 
@@ -91,7 +92,7 @@ export const PlayerMarker = ({ position, meta }: Props) => {
     useEffect(() => {
         const onDragStart = () => {
             mapStore.set((v) => ({ ...v, centerOnCharacter: false }));
-            window.api.saveConfig({ centerOnCharacter: false });
+            trpcClient.config.save.mutate({ config: { centerOnCharacter: false } });
         };
         map.on("dragstart", onDragStart);
         return () => {
@@ -130,7 +131,7 @@ export const CenterOnCharacterButton = () => {
     const toggle = () => {
         const newValue = !centerOnCharacter;
         mapStore.set((v) => ({ ...v, centerOnCharacter: newValue }));
-        window.api.saveConfig({ centerOnCharacter: newValue });
+        trpcClient.config.save.mutate({ config: { centerOnCharacter: newValue } });
     };
 
     return (

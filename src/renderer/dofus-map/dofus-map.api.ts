@@ -8,7 +8,9 @@ export interface Recoltable {
     quantity: number;
 }
 
+import { trpcClient } from "../trpc";
+
 export const getRecoltables = (resources: string[]): Promise<Recoltable[]> =>
-    Promise.all(resources.map((id) => window.api.getRecoltables(id))).then((results) =>
-        results.flat(),
+    Promise.all(resources.map((id) => trpcClient.app.getRecoltables.query({ resourceId: id }))).then((results) =>
+        (results as Recoltable[][]).flat(),
     );

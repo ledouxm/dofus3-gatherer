@@ -4,6 +4,7 @@ import { LuMinus, LuPlus, LuStar, LuX } from "react-icons/lu";
 import { useState } from "react";
 import { mapStore } from "../providers/store";
 import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
+import { trpcClient } from "../trpc";
 import { getItemIconUrl } from "../resources/ResourcesList";
 import {
     groupResourcesByJob,
@@ -28,7 +29,7 @@ const setSelectedIds = (newIds: number[]) => {
         selectedResourceIds: newIds,
         highlightedResourceIds: highlighted,
     }));
-    window.api.saveConfig({ selectedResourceIds: newIds, highlightedResourceIds: highlighted });
+    trpcClient.config.save.mutate({ config: { selectedResourceIds: newIds, highlightedResourceIds: highlighted } });
 };
 
 const toggleResource = (itemId: number, current: number[]) => {
@@ -52,7 +53,7 @@ const toggleHighlight = (itemId: number) => {
         ? current.filter((id) => id !== itemId)
         : [...current, itemId];
     mapStore.set((v) => ({ ...v, highlightedResourceIds: next }));
-    window.api.saveConfig({ highlightedResourceIds: next });
+    trpcClient.config.save.mutate({ config: { highlightedResourceIds: next } });
 };
 
 export const ResourcePickerButton = () => {

@@ -1,10 +1,11 @@
 import { mapStore } from "./providers/store";
+import { trpcClient } from "./trpc";
 
 /** Fetches open windows, finds the saved target by title, updates the store, and returns the title. */
 export async function resolveTravelHandle(): Promise<string | null> {
     const [cfg, wins] = await Promise.all([
-        window.api.getConfig(),
-        window.api.getOpenWindows(),
+        trpcClient.config.get.query({ filename: "config.json" }),
+        trpcClient.windows.getOpenWindows.query(),
     ]);
     const savedTitle = cfg?.travel?.selectedWindowTitle;
     const target = savedTitle ? wins.find((w) => w.title === savedTitle) : null;
