@@ -27,7 +27,7 @@ import type { ConfigStore } from "../providers/store";
 import { mapStore } from "../providers/store";
 
 type ClickMode = "copy" | "travel";
-type WindowInfo = { handle: number; title: string };
+type WindowInfo = { title: string };
 
 const MAPPING_HELP: Record<keyof ConfigStore["mappings"], string> = {
     MapCurrentEvent:
@@ -115,7 +115,7 @@ export const SettingsPanel = () => {
         config?.travel?.sendToProcess === true ? "travel" : "copy",
     );
     const [windows, setWindows] = useState<WindowInfo[]>([]);
-    const [selectedHandle, setSelectedHandle] = useState<number | null>(null);
+    const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
 
     const refresh = async (savedTitle?: string) => {
         const wins = await window.api.getOpenWindows();
@@ -123,13 +123,13 @@ export const SettingsPanel = () => {
         if (wins.length === 0) return;
         const target = savedTitle ? wins.find((w) => w.title === savedTitle) : null;
         if (target) {
-            setSelectedHandle(target.handle);
-            mapStore.set((v) => ({ ...v, travelHandle: target.handle }));
+            setSelectedTitle(target.title);
+            mapStore.set((v) => ({ ...v, travelTitle: target.title }));
         } else {
             const dofus = wins.find((w) => w.title.endsWith("- Release"));
             if (dofus) {
-                setSelectedHandle(dofus.handle);
-                mapStore.set((v) => ({ ...v, travelHandle: dofus.handle }));
+                setSelectedTitle(dofus.title);
+                mapStore.set((v) => ({ ...v, travelTitle: dofus.title }));
             }
         }
     };
@@ -140,11 +140,10 @@ export const SettingsPanel = () => {
         });
     }, []);
 
-    const selectWindow = (handle: number | null) => {
-        setSelectedHandle(handle);
-        mapStore.set((v) => ({ ...v, travelHandle: handle }));
-        const title = handle ? windows.find((w) => w.handle === handle)?.title : undefined;
-        window.api.saveConfig({ travel: { ...config?.travel, selectedWindowTitle: title } });
+    const selectWindow = (title: string | null) => {
+        setSelectedTitle(title);
+        mapStore.set((v) => ({ ...v, travelTitle: title }));
+        window.api.saveConfig({ travel: { ...config?.travel, selectedWindowTitle: title ?? undefined } });
     };
 
     const setClickMode = (mode: ClickMode) => {
@@ -192,20 +191,14 @@ export const SettingsPanel = () => {
                                     aria-label="Rafraîchir"
                                     color="whiteAlpha.600"
                                     _hover={{ color: "whiteAlpha.900" }}
-                                    onClick={() =>
-                                        refresh(
-                                            windows.find((w) => w.handle === selectedHandle)?.title,
-                                        )
-                                    }
+                                    onClick={() => refresh(selectedTitle ?? undefined)}
                                 >
                                     <LuRefreshCw />
                                 </IconButton>
                             </HStack>
                             <select
-                                value={selectedHandle ?? ""}
-                                onChange={(e) =>
-                                    selectWindow(e.target.value ? Number(e.target.value) : null)
-                                }
+                                value={selectedTitle ?? ""}
+                                onChange={(e) => selectWindow(e.target.value || null)}
                                 style={{
                                     background: "rgb(15, 18, 28)",
                                     border: "1px solid rgba(255,255,255,0.1)",
@@ -222,8 +215,8 @@ export const SettingsPanel = () => {
                                 </option>
                                 {windows.map((w) => (
                                     <option
-                                        key={w.handle}
-                                        value={w.handle}
+                                        key={w.title}
+                                        value={w.title}
                                         style={{ background: "rgb(15, 18, 28)" }}
                                     >
                                         {w.title.length > 40 ? w.title.slice(0, 40) + "…" : w.title}
@@ -246,23 +239,23 @@ export const SettingsPanel = () => {
                             <Button
                                 w="100%"
                                 h="40px"
-                                disabled={selectedHandle === null}
+                                disabled={selectedTitle === null}
                                 onClick={() =>
-                                    selectedHandle !== null &&
-                                    window.api.focusWindowAndSend(selectedHandle, "travel")
+                                    selectedTitle !== null &&
+                                    window.api.focusWindowAndSend(selectedTitle, "travel")
                                 }
                                 bg="rgba(212,240,0,0.08)"
                                 color={
-                                    selectedHandle !== null ? "#d4f000" : "rgba(255,255,255,0.3)"
+                                    selectedTitle !== null ? "#d4f000" : "rgba(255,255,255,0.3)"
                                 }
-                                border={`1px solid ${selectedHandle !== null ? "rgba(212,240,0,0.4)" : "rgba(255,255,255,0.1)"}`}
+                                border={`1px solid ${selectedTitle !== null ? "rgba(212,240,0,0.4)" : "rgba(255,255,255,0.1)"}`}
                                 borderRadius="md"
                                 fontSize="13px"
                                 fontWeight="700"
                                 gap={2}
                                 _hover={{
                                     bg:
-                                        selectedHandle !== null
+                                        selectedTitle !== null
                                             ? "rgba(212,240,0,0.15)"
                                             : "rgba(212,240,0,0.08)",
                                 }}

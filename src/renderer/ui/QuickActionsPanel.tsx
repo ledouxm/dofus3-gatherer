@@ -2,14 +2,14 @@ import { Box, Button, HStack, IconButton, Text, VStack } from "@chakra-ui/react"
 import { useEffect, useState } from "react";
 import { LuRefreshCw } from "react-icons/lu";
 
-type WindowInfo = { handle: number; title: string };
+type WindowInfo = { title: string };
 
 const panelBg = "rgba(10, 12, 18, 0.85)";
 const border = "1px solid rgba(255,255,255,0.1)";
 
 export function QuickActionsPanel() {
     const [windows, setWindows] = useState<WindowInfo[]>([]);
-    const [selectedHandle, setSelectedHandle] = useState<number | null>(null);
+    const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
 
     const refresh = async (savedTitle?: string) => {
         const wins = await window.api.getOpenWindows();
@@ -17,9 +17,9 @@ export function QuickActionsPanel() {
         if (wins.length === 0) return;
         const target = savedTitle ? wins.find((w) => w.title === savedTitle) : null;
         if (target) {
-            setSelectedHandle(target.handle);
-        } else if (selectedHandle === null) {
-            setSelectedHandle(wins[0].handle);
+            setSelectedTitle(target.title);
+        } else if (selectedTitle === null) {
+            setSelectedTitle(wins[0].title);
         }
     };
 
@@ -29,15 +29,14 @@ export function QuickActionsPanel() {
         });
     }, []);
 
-    const selectWindow = (handle: number) => {
-        setSelectedHandle(handle);
-        const title = windows.find((w) => w.handle === handle)?.title;
-        if (title) window.api.saveConfig({ quickActions: { selectedWindowTitle: title } });
+    const selectWindow = (title: string) => {
+        setSelectedTitle(title);
+        window.api.saveConfig({ quickActions: { selectedWindowTitle: title } });
     };
 
     const send = (action: "H" | "travel") => {
-        if (selectedHandle === null) return;
-        window.api.focusWindowAndSend(selectedHandle, action);
+        if (selectedTitle === null) return;
+        window.api.focusWindowAndSend(selectedTitle, action);
     };
 
     return (
@@ -68,8 +67,8 @@ export function QuickActionsPanel() {
             </HStack>
 
             <select
-                value={selectedHandle ?? ""}
-                onChange={(e) => selectWindow(Number(e.target.value))}
+                value={selectedTitle ?? ""}
+                onChange={(e) => selectWindow(e.target.value)}
                 style={{
                     background: "rgb(15, 18, 28)",
                     border: "1px solid rgba(255,255,255,0.1)",
@@ -83,7 +82,7 @@ export function QuickActionsPanel() {
                 }}
             >
                 {windows.map((w) => (
-                    <option key={w.handle} value={w.handle} style={{ background: "rgb(15, 18, 28)" }}>
+                    <option key={w.title} value={w.title} style={{ background: "rgb(15, 18, 28)" }}>
                         {w.title.length > 22 ? w.title.slice(0, 22) + "…" : w.title}
                     </option>
                 ))}
@@ -100,7 +99,7 @@ export function QuickActionsPanel() {
                     color="whiteAlpha.800"
                     _hover={{ bg: "rgba(255,255,255,0.12)" }}
                     _disabled={{ opacity: 0.4, cursor: "not-allowed" }}
-                    disabled={selectedHandle === null}
+                    disabled={selectedTitle === null}
                     onClick={() => send("H")}
                     fontFamily="mono"
                     fontWeight="bold"
@@ -116,7 +115,7 @@ export function QuickActionsPanel() {
                     color="whiteAlpha.800"
                     _hover={{ bg: "rgba(255,255,255,0.12)" }}
                     _disabled={{ opacity: 0.4, cursor: "not-allowed" }}
-                    disabled={selectedHandle === null}
+                    disabled={selectedTitle === null}
                     onClick={() => send("travel")}
                     fontSize="xs"
                 >

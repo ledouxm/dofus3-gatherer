@@ -15,7 +15,6 @@ export const makeSniffer = ({
     const clientC = new Cap();
 
     const devices = Cap.deviceList();
-
     const localDevice = devices.find((d) =>
         d.addresses.some((a) => a.addr.startsWith("192.168.1.")),
     );
@@ -100,7 +99,9 @@ const getTcpPayload = ({
     decoders,
     buffer,
     PROTOCOL,
-}: any): { str: string; seqno: number; datalen: number; flags: Record<string, boolean> } | undefined => {
+}: any):
+    | { str: string; seqno: number; datalen: number; flags: Record<string, boolean> }
+    | undefined => {
     if (linkType === "ETHERNET") {
         var ret = decoders.Ethernet(buffer);
 

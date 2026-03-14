@@ -137,10 +137,10 @@ const api = {
         ipcRenderer.invoke("update-recording-metadata", filename, updates),
     getDesktopSources: (): Promise<Electron.DesktopCapturerSource[]> =>
         ipcRenderer.invoke("get-desktop-sources"),
-    getOpenWindows: (): Promise<{ handle: number; title: string }[]> =>
+    getOpenWindows: (): Promise<{ title: string }[]> =>
         ipcRenderer.invoke("get-open-windows"),
-    focusWindowAndSend: (handle: number, action: "H" | "travel"): Promise<void> =>
-        ipcRenderer.invoke("focus-window-and-send", { handle, action }),
+    focusWindowAndSend: (title: string, action: "H" | "travel"): Promise<void> =>
+        ipcRenderer.invoke("focus-window-and-send", { title, action }),
     openTravelWindow: (): Promise<void> => ipcRenderer.invoke("open-travel-window"),
     onAnyServerPacket: (
         listener: (event: Electron.IpcRendererEvent, data: { typeName: string; data: unknown }) => void,

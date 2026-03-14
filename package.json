@@ -21,8 +21,7 @@
         ],
         "ignoredBuiltDependencies": [
             "better-sqlite3",
-            "cap",
-            "keysender"
+            "cap"
         ]
     },
     "packageManager": "pnpm@10.12.4",
@@ -47,7 +46,7 @@
         "better-sqlite3": "^12.6.2",
         "cap": "^0.2.1",
         "html-react-parser": "^5.2.17",
-        "keysender": "^2.4.0",
+        "@nut-tree-fork/nut-js": "^4.2.6",
         "kysely": "^0.28.11",
         "leaflet": "^1.9.4",
         "next-themes": "^0.4.6",

@@ -1,5 +1,5 @@
 import { app, BrowserWindow, clipboard, desktopCapturer, dialog, ipcMain } from "electron";
-import { getAllWindows, Hardware } from "keysender";
+import { getWindows, keyboard, Key } from "@nut-tree-fork/nut-js";
 import { shell } from "electron/common";
 import path from "path";
 import { spawnSync, execSync } from "child_process";
@@ -452,31 +452,39 @@ app.whenReady().then(async () => {
         desktopCapturer.getSources({ types: ["window", "screen"] }),
     );
 
-    ipcMain.handle("get-open-windows", () => {
-        return getAllWindows()
-            .map((w) => ({ handle: w.handle, title: w.title }))
-            .filter((w) => w.title && w.title.trim() !== "");
+    ipcMain.handle("get-open-windows", async () => {
+        const wins = await getWindows();
+        const withTitles = await Promise.all(wins.map(async (w) => ({ title: await w.title })));
+        return withTitles.filter((w) => w.title && w.title.trim() !== "");
     });
 
     ipcMain.handle(
         "focus-window-and-send",
-        async (_event, { handle, action }: { handle: number; action: "H" | "travel" }) => {
-            const hw = new Hardware(handle);
-            hw.workwindow.setForeground();
+        async (_event, { title, action }: { title: string; action: "H" | "travel" }) => {
+            const wins = await getWindows();
+            const entries = await Promise.all(wins.map(async (w) => ({ win: w, title: await w.title })));
+            keyboard.config.autoDelayMs = 20;
+            
+            const target = entries.find((e) => e.title === title);
+            if (!target) throw new Error(`Window not found: ${title}`);
+            await target.win.focus();
+
             await new Promise((r) => setTimeout(r, 150));
+
             if (action === "H") {
-                await hw.keyboard.sendKey("h");
+                await keyboard.type(Key.H);
             } else if (action === "travel") {
                 const clipText = clipboard.readText().trim();
                 const travelText = clipText.startsWith("/travel") ? clipText : null;
                 if (!travelText) {
                     throw new Error("Clipboard does not contain a valid /travel command");
                 }
-                await hw.keyboard.sendKey("space");
+                await keyboard.type(Key.Space);
                 await new Promise((r) => setTimeout(r, 200));
-                await hw.keyboard.printText(travelText);
-                await hw.keyboard.sendKey("enter");
+                await keyboard.type(travelText, );
+                await keyboard.type(Key.Return);
             }
+
         },
     );
 

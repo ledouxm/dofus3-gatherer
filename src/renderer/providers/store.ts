@@ -32,7 +32,7 @@ export const appStore = store<AppStore>({
         worldmapMetadata: null,
         centerOnCharacter: true,
         selectedHintCategoryIds: [] as number[],
-        travelHandle: null,
+        travelTitle: null,
         highlightedResourceIds: [] as number[],
         hoveredHintName: null,
     },
@@ -115,7 +115,7 @@ export type AppStore = {
         worldmapMetadata: Record<string, WorldmapMeta> | null;
         centerOnCharacter: boolean;
         selectedHintCategoryIds: number[];
-        travelHandle: number | null;
+        travelTitle: string | null;
         highlightedResourceIds: number[];
         hoveredHintName: string | null;
     };
