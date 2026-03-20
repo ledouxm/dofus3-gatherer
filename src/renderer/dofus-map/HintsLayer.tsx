@@ -18,7 +18,6 @@ interface HintPoint {
     subareaNameId: number | null;
 }
 
-
 interface Props {
     meta: WorldmapMeta;
 }
@@ -36,12 +35,22 @@ export const HintsLayer = ({ meta }: Props) => {
                 .selectFrom("HintData")
                 .leftJoin("SubAreaData", "SubAreaData.id", "HintData.subareaId")
                 .where("HintData.worldMapId", "=", Number(selectedWorldmapId))
-                .select(["HintData.id", "HintData.x", "HintData.y", "HintData.nameId", "HintData.categoryId", "HintData.gfx", "SubAreaData.nameId as subareaNameId"])
+                .select([
+                    "HintData.id",
+                    "HintData.x",
+                    "HintData.y",
+                    "HintData.nameId",
+                    "HintData.categoryId",
+                    "HintData.gfx",
+                    "SubAreaData.nameId as subareaNameId",
+                ])
                 .execute() as Promise<HintPoint[]>,
         enabled: selectedWorldmapId !== null,
     });
 
-    const visibleHints = (hints ?? []).filter((h) => selectedHintCategoryIds.includes(h.categoryId));
+    const visibleHints = (hints ?? []).filter((h) =>
+        selectedHintCategoryIds.includes(h.categoryId),
+    );
 
     useEffect(() => {
         if (!visibleHints.length) return;
@@ -77,7 +86,8 @@ export const HintsLayer = ({ meta }: Props) => {
         };
 
         const { x: cellW, y: cellH } = getCellDimensions(meta);
-        const getSize = () => Math.max(8, meta.mapWidth * Math.pow(2, map.getZoom() - meta.z_max) * 1.2);
+        const getSize = () =>
+            Math.max(8, meta.mapWidth * Math.pow(2, map.getZoom() - meta.z_max) * 1.2);
 
         drawRef.current = () => {
             const ctx = canvas.getContext("2d");
@@ -103,8 +113,13 @@ export const HintsLayer = ({ meta }: Props) => {
             }
         };
 
-        const hideCanvas = () => { canvas.style.display = "none"; };
-        const showCanvas = () => { canvas.style.display = ""; drawRef.current(); };
+        const hideCanvas = () => {
+            canvas.style.display = "none";
+        };
+        const showCanvas = () => {
+            canvas.style.display = "";
+            drawRef.current();
+        };
 
         resize();
         map.on("resize", resize);
@@ -125,11 +140,15 @@ export const HintsLayer = ({ meta }: Props) => {
     }, [map, visibleHints, meta]);
 
     const { x: cellW, y: cellH } = getCellDimensions(meta);
-    const getHoverRadius = () => Math.max(8, meta.mapWidth * Math.pow(2, map.getZoom() - meta.z_max) * 1.2) / 2;
+    const getHoverRadius = () =>
+        Math.max(8, meta.mapWidth * Math.pow(2, map.getZoom() - meta.z_max) * 1.2) / 2;
 
     useMapEvents({
         mousemove(e) {
-            if (!visibleHints.length) { mapStore.set((v) => ({ ...v, hoveredHintName: null })); return; }
+            if (!visibleHints.length) {
+                mapStore.set((v) => ({ ...v, hoveredHintName: null }));
+                return;
+            }
             let best: { dist: number; hint: HintPoint } | null = null;
             for (const hint of visibleHints) {
                 const { x, y } = dofusToWorld({ posX: hint.x, posY: hint.y }, meta);
@@ -141,8 +160,11 @@ export const HintsLayer = ({ meta }: Props) => {
             }
             if (best) {
                 const hintName = getTranslation(best.hint.nameId);
-                const subareaName = best.hint.subareaNameId ? getTranslation(best.hint.subareaNameId) : null;
-                const name = hintName === "Zaap" && subareaName ? `Zaap - ${subareaName}` : hintName;
+                const subareaName = best.hint.subareaNameId
+                    ? getTranslation(best.hint.subareaNameId)
+                    : null;
+                const name =
+                    hintName === "Zaap" && subareaName ? `Zaap - ${subareaName}` : hintName;
                 mapStore.set((v) => ({ ...v, hoveredHintName: name }));
             } else {
                 mapStore.set((v) => ({ ...v, hoveredHintName: null }));

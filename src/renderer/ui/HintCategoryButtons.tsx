@@ -78,6 +78,7 @@ const HintCategoryList = () => {
                 const isActive = selectedHintCategoryIds.includes(cat.id);
                 const name = translations?.[cat.nameId] ?? String(cat.nameId);
                 const gfx = iconByCategoryId.get(cat.id);
+
                 return (
                     <button
                         key={cat.id}
