@@ -12,5 +12,15 @@ extraResources:
   - from: resources/proto
     to: proto
 win:
-  target: portable
+  target: nsis
 defaultArch: x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+
+publish:
+  provider: github
+  owner: ledouxm
+  repo: dofus3-gatherer

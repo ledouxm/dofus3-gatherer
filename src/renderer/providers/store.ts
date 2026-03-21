@@ -2,7 +2,13 @@ import { store } from "@simplestack/store";
 import type { WorldmapMeta } from "../dofus-map/dofus-map.utils";
 import type { GuideProgress } from "../ui/guides/types";
 
+export type UpdateState =
+    | { status: "idle" }
+    | { status: "downloading"; version?: string; percent?: number }
+    | { status: "ready"; version: string };
+
 export const appStore = store<AppStore>({
+    update: { status: "idle" },
     config: {
         mappings: {
             MapCurrentEvent: null,
@@ -41,6 +47,11 @@ export const appStore = store<AppStore>({
 export const configStore = appStore.select("config");
 export const translationStore = appStore.select("i18n");
 export const mapStore = appStore.select("map");
+export const updateStore = appStore.select("update");
+
+window.api.onUpdateStatus((payload: UpdateState) => {
+    appStore.set((state) => ({ ...state, update: payload }));
+});
 
 export type ConfigStore = {
     mappings: {
@@ -106,6 +117,7 @@ export type TranslationStore = {
 };
 
 export type AppStore = {
+    update: UpdateState;
     config: ConfigStore;
     i18n: TranslationStore;
     map: {

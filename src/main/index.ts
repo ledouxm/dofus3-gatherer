@@ -1,4 +1,5 @@
 import { app, BrowserWindow, clipboard, desktopCapturer, dialog, ipcMain } from "electron";
+import { autoUpdater } from "electron-updater";
 import { getAllWindows, Hardware } from "keysender";
 import { shell } from "electron/common";
 import path from "path";
@@ -525,6 +526,28 @@ app.whenReady().then(async () => {
 
     const [mainWindow, , proto] = await Promise.all([windowPromise, dbPromise, protoPromise]);
     mainWindow.on("closed", () => app.quit());
+
+    if (!is.dev) {
+        const sendUpdate = (payload: object) => {
+            BrowserWindow.getAllWindows().forEach((w) => {
+                if (!w.isDestroyed()) w.webContents.send("update-status", payload);
+            });
+        };
+        autoUpdater.autoDownload = true;
+        autoUpdater.autoInstallOnAppQuit = true;
+        autoUpdater.on("update-available", (info) =>
+            sendUpdate({ status: "downloading", version: info.version }),
+        );
+        autoUpdater.on("download-progress", (progress) =>
+            sendUpdate({ status: "downloading", percent: progress.percent }),
+        );
+        autoUpdater.on("update-downloaded", (info) =>
+            sendUpdate({ status: "ready", version: info.version }),
+        );
+        autoUpdater.on("error", (err) => console.error("[updater]", err));
+        autoUpdater.checkForUpdates();
+        ipcMain.handle("quit-and-install", () => autoUpdater.quitAndInstall());
+    }
 
     const templateMessage = proto.lookupType("TemplateMessage");
 

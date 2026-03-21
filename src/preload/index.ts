@@ -230,6 +230,12 @@ const api = {
         ipcRenderer.invoke("fetch-guides-from-server", status),
     downloadGuideFromServer: (guideId: number, folderPath: string): Promise<boolean> =>
         ipcRenderer.invoke("download-guide-from-server", guideId, folderPath),
+    onUpdateStatus: (listener: (payload: { status: string; version?: string; percent?: number }) => void): void => {
+        ipcRenderer.on("update-status", (_event, payload) => listener(payload));
+    },
+    quitAndInstall: (): void => {
+        ipcRenderer.invoke("quit-and-install");
+    },
 };
 
 export type AppApi = typeof api;

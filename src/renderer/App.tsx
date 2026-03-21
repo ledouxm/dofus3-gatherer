@@ -86,20 +86,20 @@ export function App() {
     }, [mappingsSynced]);
 
     useEffect(() => {
-        if (!updateInfo?.updateAvailable) return;
+        if (updateInfo.status !== "ready") return;
         toaster.create({
-            id: "update-available",
-            title: "Update available",
-            description: `Version ${updateInfo.latestVersion} is ready to download.`,
-            type: "info",
+            id: "update-ready",
+            title: "Update ready to install",
+            description: `Version ${updateInfo.version} has been downloaded.`,
+            type: "success",
             action: {
-                label: "Download",
-                onClick: () => window.api.openExternal(updateInfo.releaseUrl),
+                label: "Restart & Install",
+                onClick: () => window.api.quitAndInstall(),
             },
             duration: undefined,
             closable: true,
         });
-    }, [updateInfo]);
+    }, [updateInfo.status]);
 
     return (
         <div className="app">

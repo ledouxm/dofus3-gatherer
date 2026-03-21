@@ -41,9 +41,9 @@ jobs:
 
       - name: Build
         env:
-          # Use workflow input if provided, otherwise fall back to repository variable
           VITE_CDN_BASE_URL: ${{ inputs.cdn_url || vars.VITE_CDN_BASE_URL }}
-        run: pnpm build
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm build --publish ${{ startsWith(github.ref, 'refs/tags/') && 'always' || 'never' }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -51,9 +51,3 @@ jobs:
           name: dofus3-gatherer
           path: dist/*.exe
           if-no-files-found: error
-
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*.exe
