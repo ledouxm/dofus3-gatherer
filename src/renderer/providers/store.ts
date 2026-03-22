@@ -102,6 +102,7 @@ export type ConfigStore = {
         craftingSubtab?: "stats" | "crafting";
         craftingHistory?: unknown[];
         craftingEntries?: unknown[];
+        craftingPrices?: Record<string, unknown>;
     };
     explorer?: {
         section?: string;

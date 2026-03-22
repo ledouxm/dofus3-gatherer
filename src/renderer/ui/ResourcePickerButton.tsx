@@ -66,7 +66,6 @@ export const ResourcePickerButton = () => {
     const [iconSearch, setIconSearch] = useState("");
     const [selectedIconItemId, setSelectedIconItemId] = useState<number | null>(null);
 
-    console.log(resources);
     if (!resources) return null;
 
     const jobGroups = groupResourcesByJob(resources);

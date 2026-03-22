@@ -55,10 +55,6 @@ export const CharacterPosition = ({ meta }: { meta: WorldmapMeta }) => {
 
         if (coords && infos) {
             const { x, y } = decodeCompressedCoords(Number(coords.compressedCoords));
-            console.log(
-                `Decoded coordinates for mapId ${mapId}: x=${x}, y=${y}, worldMap=${infos.worldMap}, subAreaId=${infos.subAreaId}`,
-            );
-
             const characterPosition = {
                 position: [x, y] as [number, number],
                 mapId: mapId,
