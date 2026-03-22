@@ -1,9 +1,9 @@
-import { Badge, Box, Flex, HStack, Input, Text, VStack } from "@chakra-ui/react";
+import { Badge, Box, CloseButton, Dialog, Flex, HStack, Input, Text, VStack } from "@chakra-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { sql, type SqlBool } from "kysely";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "react-use";
-import { LuPackage, LuSearch, LuX } from "react-icons/lu";
+import { LuPackage, LuSearch, LuShoppingBasket, LuX } from "react-icons/lu";
 import { db } from "../db";
 import { getItemIconUrl } from "../resources/ResourcesList";
 import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider";
@@ -11,7 +11,6 @@ import { useConfig, useUpdateConfigMutation } from "../providers/ConfigProvider"
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const ACCENT = "#d4f000";
-const INACTIVE = "rgba(255,255,255,0.38)";
 const border = "1px solid rgba(255,255,255,0.1)";
 const panelBg = "rgba(10, 12, 18, 0.85)";
 const inputStyle = {
@@ -26,27 +25,15 @@ const inputStyle = {
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type PricePer = 1 | 10 | 100;
-
 type ItemRow = { id: number; iconId: number; level: number; typeId: number; name: string };
 
-type RecipeIngredient = { id: number; iconId: number; name: string; quantity: number };
+type RecipeIngredient = { id: number; iconId: number; name: string; quantity: number; subRecipe?: RecipeResult };
 type RecipeResult = { jobName: string; resultLevel: number; ingredients: RecipeIngredient[] } | null;
-
-type IngredientInput = {
-    id: number;
-    buyQty: string;
-    buyPrice: string;
-    buyPricePer: PricePer;
-};
 
 type CraftEntry = {
     item: ItemRow;
     recipe: RecipeResult | "loading";
     craftQty: string;
-    sellPrice: string;
-    sellPricePer: PricePer;
-    ingredients: IngredientInput[];
 };
 
 // ── DB queries ────────────────────────────────────────────────────────────────
@@ -76,7 +63,7 @@ async function searchItems(input: string): Promise<ItemRow[]> {
     return query.orderBy("i.level", "asc").limit(30).execute() as Promise<ItemRow[]>;
 }
 
-async function loadItemRecipe(itemId: number): Promise<RecipeResult> {
+async function loadItemRecipe(itemId: number, depth = 3): Promise<RecipeResult> {
     const recipe = await db
         .selectFrom("RecipeData as r")
         .select(["r.id", "r.jobId", "r.resultLevel", "r.quantities"])
@@ -135,7 +122,30 @@ async function loadItemRecipe(itemId: number): Promise<RecipeResult> {
         })
         .filter((x): x is RecipeIngredient => x !== null);
 
+    if (depth > 0) {
+        const subRecipes = await Promise.all(ingredients.map((ing) => loadItemRecipe(ing.id, depth - 1)));
+        ingredients.forEach((ing, idx) => { if (subRecipes[idx]) ing.subRecipe = subRecipes[idx]!; });
+    }
+
     return { jobName: jobRow?.jobName ?? "", resultLevel: recipe.resultLevel, ingredients };
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function collectRawIngredients(
+    ingredients: RecipeIngredient[],
+    multiplier: number,
+    acc: Map<number, { iconId: number; name: string; qty: number }>,
+) {
+    for (const ing of ingredients) {
+        if (ing.subRecipe) {
+            collectRawIngredients(ing.subRecipe.ingredients, ing.quantity * multiplier, acc);
+        } else {
+            const existing = acc.get(ing.id);
+            if (existing) existing.qty += ing.quantity * multiplier;
+            else acc.set(ing.id, { iconId: ing.iconId, name: ing.name, qty: ing.quantity * multiplier });
+        }
+    }
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -186,92 +196,64 @@ function LevelBadge({ level }: { level: number }) {
     );
 }
 
-function PriceInput({
-    price,
-    onPriceChange,
-    pricePer,
-    onPricePerChange,
-    placeholder = "prix",
+function SubRecipeTree({
+    recipe,
+    expandedSubs,
+    toggleSub,
+    multiplier = 1,
 }: {
-    price: string;
-    onPriceChange: (v: string) => void;
-    pricePer: PricePer;
-    onPricePerChange: (v: PricePer) => void;
-    placeholder?: string;
+    recipe: RecipeResult;
+    expandedSubs: Set<number>;
+    toggleSub: (id: number) => void;
+    multiplier?: number;
 }) {
+    if (!recipe) return null;
     return (
-        <HStack gap={1} flexShrink={0}>
-            <Input
-                value={price}
-                onChange={(e) => onPriceChange(e.target.value)}
-                placeholder={placeholder}
-                size="xs"
-                w="80px"
-                type="number"
-                min={0}
-                {...inputStyle}
-            />
-            {([1, 10, 100] as PricePer[]).map((p) => (
-                <Box
-                    key={p}
-                    as="button"
-                    onClick={() => onPricePerChange(p)}
-                    px="5px"
-                    py="1px"
-                    fontSize="10px"
-                    fontWeight="600"
-                    borderRadius="4px"
-                    border="1px solid"
-                    borderColor={pricePer === p ? ACCENT : "rgba(255,255,255,0.12)"}
-                    color={pricePer === p ? ACCENT : "rgba(255,255,255,0.4)"}
-                    bg={pricePer === p ? `${ACCENT}18` : "transparent"}
-                    cursor="pointer"
-                    style={{ outline: "none" }}
-                >
-                    ×{p}
+        <VStack align="stretch" gap={1}>
+            {recipe.ingredients.map((sub) => (
+                <Box key={sub.id}>
+                    <HStack gap={2} py="2px">
+                        <ItemIcon iconId={sub.iconId} size={14} />
+                        <Text fontSize="10px" color="whiteAlpha.600" flex={1} minW="0" truncate>{sub.name}</Text>
+                        <Text fontSize="10px" color="whiteAlpha.400" flexShrink={0}>×{sub.quantity * multiplier}</Text>
+                        {sub.subRecipe && (
+                            <Box
+                                as="button"
+                                onClick={() => toggleSub(sub.id)}
+                                fontSize="9px"
+                                color="whiteAlpha.400"
+                                _hover={{ color: "white" }}
+                                bg="transparent"
+                                border="none"
+                                cursor="pointer"
+                                flexShrink={0}
+                                style={{ outline: "none" }}
+                            >
+                                {expandedSubs.has(sub.id) ? "▲" : "▼"}
+                            </Box>
+                        )}
+                    </HStack>
+                    {sub.subRecipe && expandedSubs.has(sub.id) && (
+                        <Box pl={3} borderLeft="2px solid rgba(255,255,255,0.08)" ml={1}>
+                            <SubRecipeTree
+                                recipe={sub.subRecipe}
+                                expandedSubs={expandedSubs}
+                                toggleSub={toggleSub}
+                                multiplier={sub.quantity * multiplier}
+                            />
+                        </Box>
+                    )}
                 </Box>
             ))}
-        </HStack>
+        </VStack>
     );
 }
 
-// ── Profit calculation ────────────────────────────────────────────────────────
-
-function calcProfit(entries: CraftEntry[]): { totalRevenue: number; totalCost: number; profit: number } {
-    let totalRevenue = 0;
-    let totalCost = 0;
-
-    for (const e of entries) {
-        const qty = Math.max(0, parseInt(e.craftQty || "0", 10));
-        const sell = parseFloat(e.sellPrice || "0");
-        totalRevenue += qty * (sell / e.sellPricePer);
-
-        for (const ing of e.ingredients) {
-            const buyQty = Math.max(0, parseInt(ing.buyQty || "0", 10));
-            const buyPrice = parseFloat(ing.buyPrice || "0");
-            totalCost += buyQty * (buyPrice / ing.buyPricePer);
-        }
-    }
-
-    return { totalRevenue, totalCost, profit: totalRevenue - totalCost };
-}
-
-function formatKamas(n: number): string {
-    const abs = Math.abs(n);
-    const sign = n < 0 ? "-" : "+";
-    if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)} M`;
-    if (abs >= 1_000) return `${sign}${Math.round(abs / 1_000)} k`;
-    return `${sign}${Math.round(abs)}`;
-}
-
-// ── Saved entry shape (persisted to config, no recipe data) ──────────────────
+// ── Saved entry shape (persisted to config) ───────────────────────────────────
 
 type SavedEntry = {
     item: ItemRow;
     craftQty: string;
-    sellPrice: string;
-    sellPricePer: PricePer;
-    ingredients: IngredientInput[];
 };
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -282,10 +264,17 @@ export function CraftingPanel() {
     const queryClient = useQueryClient();
 
     const [entries, setEntries] = useState<CraftEntry[]>([]);
+    const [expandedSubs, setExpandedSubs] = useState<Set<number>>(new Set());
+    const toggleSub = (id: number) => setExpandedSubs((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+    });
+    const [showModal, setShowModal] = useState(false);
     const [searchInput, setSearchInput] = useState("");
-    const [debouncedInput, setDebouncedInput] = useState("");
     const [searchResults, setSearchResults] = useState<ItemRow[]>([]);
     const [showResults, setShowResults] = useState(false);
+    const [focused, setFocused] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
     const hasRestoredEntries = useRef(false);
 
@@ -322,9 +311,6 @@ export function CraftingPanel() {
             const toSave: SavedEntry[] = entries.map((e) => ({
                 item: e.item,
                 craftQty: e.craftQty,
-                sellPrice: e.sellPrice,
-                sellPricePer: e.sellPricePer,
-                ingredients: e.ingredients,
             }));
             updateConfig.mutate({ harvests: { ...config?.harvests, craftingEntries: toSave } });
         },
@@ -334,7 +320,6 @@ export function CraftingPanel() {
 
     useDebounce(
         () => {
-            setDebouncedInput(searchInput);
             if (!searchInput.trim()) {
                 setSearchResults([]);
                 return;
@@ -357,15 +342,7 @@ export function CraftingPanel() {
             return;
         }
 
-        const newEntry: CraftEntry = {
-            item,
-            recipe: "loading",
-            craftQty: "1",
-            sellPrice: "",
-            sellPricePer: 1,
-            ingredients: [],
-        };
-        setEntries((prev) => [...prev, newEntry]);
+        setEntries((prev) => [...prev, { item, recipe: "loading", craftQty: "1" }]);
         setShowResults(false);
         setSearchInput("");
 
@@ -378,49 +355,31 @@ export function CraftingPanel() {
             staleTime: Infinity,
         });
 
-        const ingredients: IngredientInput[] = recipe
-            ? recipe.ingredients.map((ing) => ({
-                  id: ing.id,
-                  buyQty: String(ing.quantity),
-                  buyPrice: "",
-                  buyPricePer: 1 as PricePer,
-              }))
-            : [];
-
         setEntries((prev) =>
-            prev.map((e) => (e.item.id === item.id ? { ...e, recipe, ingredients } : e)),
+            prev.map((e) => (e.item.id === item.id ? { ...e, recipe } : e)),
         );
     };
 
-    const updateEntry = (itemId: number, patch: Partial<Pick<CraftEntry, "craftQty" | "sellPrice" | "sellPricePer">>) => {
-        setEntries((prev) => prev.map((e) => (e.item.id === itemId ? { ...e, ...patch } : e)));
-    };
-
-    const updateIngredient = (itemId: number, ingId: number, patch: Partial<IngredientInput>) => {
-        setEntries((prev) =>
-            prev.map((e) =>
-                e.item.id !== itemId
-                    ? e
-                    : { ...e, ingredients: e.ingredients.map((i) => (i.id === ingId ? { ...i, ...patch } : i)) },
-            ),
-        );
+    const updateCraftQty = (itemId: number, craftQty: string) => {
+        setEntries((prev) => prev.map((e) => (e.item.id === itemId ? { ...e, craftQty } : e)));
     };
 
     const removeEntry = (itemId: number) => setEntries((prev) => prev.filter((e) => e.item.id !== itemId));
 
-    const { totalRevenue, totalCost, profit } = calcProfit(entries);
-
-    const totalIngredientMap = useMemo(() => {
-        const map = new Map<number, number>();
+    const totalRawMap = useMemo(() => {
+        const map = new Map<number, { iconId: number; name: string; qty: number }>();
         for (const e of entries) {
             if (e.recipe === null || e.recipe === "loading") continue;
             const qty = Math.max(1, parseInt(e.craftQty || "1", 10));
-            for (const ing of e.recipe.ingredients) {
-                map.set(ing.id, (map.get(ing.id) ?? 0) + ing.quantity * qty);
-            }
+            collectRawIngredients(e.recipe.ingredients, qty, map);
         }
         return map;
     }, [entries]);
+
+    const totalRawList = useMemo(
+        () => [...totalRawMap.values()].sort((a, b) => b.qty - a.qty),
+        [totalRawMap],
+    );
 
     return (
         <Flex flex={1} direction="column" overflow="hidden" bg={panelBg}>
@@ -441,8 +400,8 @@ export function CraftingPanel() {
                     <Input
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
-                        onFocus={() => { if (searchResults.length > 0) setShowResults(true); }}
-                        onBlur={() => setTimeout(() => setShowResults(false), 150)}
+                        onFocus={() => { setFocused(true); if (searchResults.length > 0) setShowResults(true); }}
+                        onBlur={() => { setFocused(false); setTimeout(() => setShowResults(false), 150); }}
                         placeholder="Rechercher un item à crafter…"
                         pl="32px"
                         size="sm"
@@ -450,8 +409,8 @@ export function CraftingPanel() {
                     />
                 </Box>
 
-                {/* Search results dropdown */}
-                {showResults && searchResults.length > 0 && (
+                {/* Dropdown: recents (empty input) or search results */}
+                {(focused && !searchInput.trim() && craftingHistory.length > 0) || (showResults && searchResults.length > 0) ? (
                     <Box
                         position="absolute"
                         top="calc(100% - 4px)"
@@ -464,61 +423,54 @@ export function CraftingPanel() {
                         maxH="200px"
                         overflowY="auto"
                     >
-                        {searchResults.map((item) => (
-                            <HStack
-                                key={item.id}
-                                px={3}
-                                py="7px"
-                                gap={2}
-                                cursor="pointer"
-                                _hover={{ bg: "rgba(255,255,255,0.06)" }}
-                                borderBottom={border}
-                                onMouseDown={() => addItem(item)}
-                            >
-                                <ItemIcon iconId={item.iconId} size={20} />
-                                <Text fontSize="xs" color="white" flex={1} minW="0" truncate>
-                                    {item.name}
-                                </Text>
-                                <LevelBadge level={item.level} />
-                            </HStack>
-                        ))}
+                        {!searchInput.trim() ? (
+                            <>
+                                <Box px={3} pt={2} pb={1}>
+                                    <Text fontSize="10px" color="whiteAlpha.400" fontWeight="600" letterSpacing="wider">
+                                        RÉCENTS
+                                    </Text>
+                                </Box>
+                                {craftingHistory.map((h) => (
+                                    <HStack
+                                        key={h.id}
+                                        px={3}
+                                        py="7px"
+                                        gap={2}
+                                        cursor="pointer"
+                                        _hover={{ bg: "rgba(255,255,255,0.06)" }}
+                                        borderBottom={border}
+                                        onMouseDown={() => setSearchInput(h.name)}
+                                    >
+                                        <ItemIcon iconId={h.iconId} size={20} />
+                                        <Text fontSize="xs" color="white" flex={1} minW="0" truncate>
+                                            {h.name}
+                                        </Text>
+                                        <LevelBadge level={h.level} />
+                                    </HStack>
+                                ))}
+                            </>
+                        ) : (
+                            searchResults.map((item) => (
+                                <HStack
+                                    key={item.id}
+                                    px={3}
+                                    py="7px"
+                                    gap={2}
+                                    cursor="pointer"
+                                    _hover={{ bg: "rgba(255,255,255,0.06)" }}
+                                    borderBottom={border}
+                                    onMouseDown={() => addItem(item)}
+                                >
+                                    <ItemIcon iconId={item.iconId} size={20} />
+                                    <Text fontSize="xs" color="white" flex={1} minW="0" truncate>
+                                        {item.name}
+                                    </Text>
+                                    <LevelBadge level={item.level} />
+                                </HStack>
+                            ))
+                        )}
                     </Box>
-                )}
-
-                {/* History chips */}
-                {!searchInput.trim() && craftingHistory.length > 0 && (
-                    <HStack wrap="wrap" gap={1} mt={2}>
-                        <Text fontSize="10px" color="whiteAlpha.400" fontWeight="600" letterSpacing="wider" flexShrink={0}>
-                            RÉCENTS
-                        </Text>
-                        {craftingHistory.map((h) => (
-                            <Box
-                                key={h.id}
-                                as="button"
-                                px={2}
-                                py="2px"
-                                fontSize="11px"
-                                fontWeight="500"
-                                borderRadius="4px"
-                                border={border}
-                                color="whiteAlpha.500"
-                                bg="transparent"
-                                cursor="pointer"
-                                _hover={{ bg: "rgba(255,255,255,0.06)", color: "whiteAlpha.900" }}
-                                style={{ outline: "none" }}
-                                onClick={() => addItem(h)}
-                            >
-                                {h.name}
-                            </Box>
-                        ))}
-                    </HStack>
-                )}
-
-                {!searchInput.trim() && craftingHistory.length === 0 && (
-                    <Text fontSize="xs" color="whiteAlpha.300" mt={2}>
-                        Recherchez un item pour calculer le profit de craft.
-                    </Text>
-                )}
+                ) : null}
             </Box>
 
             {/* Entry list */}
@@ -553,6 +505,16 @@ export function CraftingPanel() {
                                     <Text fontSize="sm" fontWeight="600" color="white" flex={1} truncate>
                                         {entry.item.name}
                                     </Text>
+                                    <Input
+                                        value={entry.craftQty}
+                                        onChange={(e) => updateCraftQty(entry.item.id, e.target.value)}
+                                        size="xs"
+                                        w="52px"
+                                        type="number"
+                                        min={1}
+                                        flexShrink={0}
+                                        {...inputStyle}
+                                    />
                                     <LevelBadge level={entry.item.level} />
                                     <Box
                                         as="button"
@@ -569,35 +531,6 @@ export function CraftingPanel() {
                                     >
                                         <LuX size={14} />
                                     </Box>
-                                </HStack>
-
-                                {/* Craft qty + sell price */}
-                                <HStack px={3} py={2} gap={4} flexWrap="wrap" borderBottom={border}>
-                                    <HStack gap={2}>
-                                        <Text fontSize="11px" color="whiteAlpha.500" flexShrink={0}>
-                                            Qté craft
-                                        </Text>
-                                        <Input
-                                            value={entry.craftQty}
-                                            onChange={(e) => updateEntry(entry.item.id, { craftQty: e.target.value })}
-                                            size="xs"
-                                            w="60px"
-                                            type="number"
-                                            min={1}
-                                            {...inputStyle}
-                                        />
-                                    </HStack>
-                                    <HStack gap={2} flexWrap="wrap">
-                                        <Text fontSize="11px" color="whiteAlpha.500" flexShrink={0}>
-                                            Prix vente
-                                        </Text>
-                                        <PriceInput
-                                            price={entry.sellPrice}
-                                            onPriceChange={(v) => updateEntry(entry.item.id, { sellPrice: v })}
-                                            pricePer={entry.sellPricePer}
-                                            onPricePerChange={(v) => updateEntry(entry.item.id, { sellPricePer: v })}
-                                        />
-                                    </HStack>
                                 </HStack>
 
                                 {/* Ingredients */}
@@ -624,10 +557,7 @@ export function CraftingPanel() {
                                             </HStack>
                                             <VStack align="stretch" gap={2}>
                                                 {entry.recipe.ingredients.map((ing) => {
-                                                    const ingInput = entry.ingredients.find((i) => i.id === ing.id);
                                                     const requiredQty = ing.quantity * craftQtyNum;
-                                                    const totalQty = totalIngredientMap.get(ing.id) ?? requiredQty;
-                                                    if (!ingInput) return null;
                                                     return (
                                                         <Box
                                                             key={ing.id}
@@ -637,53 +567,41 @@ export function CraftingPanel() {
                                                             borderRadius="6px"
                                                             border={border}
                                                         >
-                                                            <HStack gap={2} mb={2}>
+                                                            <HStack gap={2}>
                                                                 <ItemIcon iconId={ing.iconId} size={18} />
                                                                 <Text fontSize="xs" color="white" flex={1} minW="0" truncate>
                                                                     {ing.name}
                                                                 </Text>
-                                                                <HStack gap={2} flexShrink={0}>
-                                                                    <Text fontSize="10px" color="whiteAlpha.500" fontWeight="600">
-                                                                        ici: {requiredQty}
-                                                                    </Text>
-                                                                    <Text fontSize="10px" color={ACCENT} fontWeight="600">
-                                                                        total: {totalQty}
-                                                                    </Text>
-                                                                </HStack>
+                                                                <Text fontSize="11px" color={ACCENT} fontWeight="600" flexShrink={0}>
+                                                                    ×{requiredQty}
+                                                                </Text>
+                                                                {ing.subRecipe && (
+                                                                    <Box
+                                                                        as="button"
+                                                                        onClick={() => toggleSub(ing.id)}
+                                                                        fontSize="10px"
+                                                                        color="whiteAlpha.400"
+                                                                        _hover={{ color: "white" }}
+                                                                        bg="transparent"
+                                                                        border="none"
+                                                                        cursor="pointer"
+                                                                        flexShrink={0}
+                                                                        style={{ outline: "none" }}
+                                                                    >
+                                                                        {expandedSubs.has(ing.id) ? "▲" : "▼"}
+                                                                    </Box>
+                                                                )}
                                                             </HStack>
-                                                            <HStack gap={3} flexWrap="wrap">
-                                                                <HStack gap={2}>
-                                                                    <Text fontSize="10px" color="whiteAlpha.400" flexShrink={0}>
-                                                                        Qté achat
-                                                                    </Text>
-                                                                    <Input
-                                                                        value={ingInput.buyQty}
-                                                                        onChange={(e) =>
-                                                                            updateIngredient(entry.item.id, ing.id, { buyQty: e.target.value })
-                                                                        }
-                                                                        size="xs"
-                                                                        w="60px"
-                                                                        type="number"
-                                                                        min={0}
-                                                                        {...inputStyle}
+                                                            {ing.subRecipe && expandedSubs.has(ing.id) && (
+                                                                <Box mt={2} pl={2} borderLeft="2px solid rgba(255,255,255,0.08)">
+                                                                    <SubRecipeTree
+                                                                        recipe={ing.subRecipe}
+                                                                        expandedSubs={expandedSubs}
+                                                                        toggleSub={toggleSub}
+                                                                        multiplier={craftQtyNum}
                                                                     />
-                                                                </HStack>
-                                                                <HStack gap={2} flexWrap="wrap">
-                                                                    <Text fontSize="10px" color="whiteAlpha.400" flexShrink={0}>
-                                                                        Prix achat
-                                                                    </Text>
-                                                                    <PriceInput
-                                                                        price={ingInput.buyPrice}
-                                                                        onPriceChange={(v) =>
-                                                                            updateIngredient(entry.item.id, ing.id, { buyPrice: v })
-                                                                        }
-                                                                        pricePer={ingInput.buyPricePer}
-                                                                        onPricePerChange={(v) =>
-                                                                            updateIngredient(entry.item.id, ing.id, { buyPricePer: v })
-                                                                        }
-                                                                    />
-                                                                </HStack>
-                                                            </HStack>
+                                                                </Box>
+                                                            )}
                                                         </Box>
                                                     );
                                                 })}
@@ -702,46 +620,105 @@ export function CraftingPanel() {
                 </VStack>
             </Box>
 
-            {/* Profit summary bar */}
-            <Box
-                flexShrink={0}
-                borderTop={border}
-                px={4}
-                py={3}
-                bg="rgba(10,12,18,0.95)"
-            >
-                <HStack justify="space-between" flexWrap="wrap" gap={3}>
-                    <HStack gap={1}>
-                        <Text fontSize="10px" color="whiteAlpha.400" fontWeight="600" letterSpacing="0.08em">
-                            REVENUS
-                        </Text>
-                        <Text fontSize="12px" color={ACCENT} fontWeight="700" fontFamily="mono">
-                            {formatKamas(totalRevenue)}
-                        </Text>
-                    </HStack>
-                    <HStack gap={1}>
-                        <Text fontSize="10px" color="whiteAlpha.400" fontWeight="600" letterSpacing="0.08em">
-                            COÛTS
-                        </Text>
-                        <Text fontSize="12px" color="whiteAlpha.600" fontWeight="700" fontFamily="mono">
-                            {formatKamas(-totalCost)}
-                        </Text>
-                    </HStack>
-                    <HStack gap={1}>
-                        <Text fontSize="10px" color="whiteAlpha.400" fontWeight="600" letterSpacing="0.08em">
-                            BÉNÉFICE
-                        </Text>
-                        <Text
-                            fontSize="13px"
+            {/* Bottom bar */}
+            <Box flexShrink={0} borderTop={border} px={3} py={3} bg="rgba(10,12,18,0.95)">
+                <Box
+                    as="button"
+                    w="100%"
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    gap="8px"
+                    py={2}
+                    px={4}
+                    borderRadius="6px"
+                    border="1px solid"
+                    borderColor={totalRawList.length > 0 ? ACCENT : "rgba(255,255,255,0.1)"}
+                    bg={totalRawList.length > 0 ? `${ACCENT}18` : "transparent"}
+                    color={totalRawList.length > 0 ? ACCENT : "whiteAlpha.300"}
+                    cursor={totalRawList.length > 0 ? "pointer" : "default"}
+                    fontSize="13px"
+                    fontWeight="600"
+                    _hover={totalRawList.length > 0 ? { bg: `${ACCENT}28` } : {}}
+                    style={{ outline: "none" }}
+                    onClick={() => totalRawList.length > 0 && setShowModal(true)}
+                >
+                    <LuShoppingBasket size={16} />
+                    Ressources totales
+                    {totalRawList.length > 0 && (
+                        <Box
+                            as="span"
+                            display="inline-flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            bg={ACCENT}
+                            color="#000"
+                            borderRadius="full"
+                            w="18px"
+                            h="18px"
+                            fontSize="10px"
                             fontWeight="800"
-                            fontFamily="mono"
-                            color={profit > 0 ? "#00e676" : profit < 0 ? "#ff5252" : "whiteAlpha.500"}
+                            flexShrink={0}
                         >
-                            {formatKamas(profit)}
-                        </Text>
-                    </HStack>
-                </HStack>
+                            {totalRawList.length}
+                        </Box>
+                    )}
+                </Box>
             </Box>
+
+            {/* Total resources modal */}
+            <Dialog.Root open={showModal} onOpenChange={(d) => setShowModal(d.open)}>
+                <Dialog.Backdrop />
+                <Dialog.Positioner>
+                    <Dialog.Content
+                        bg="rgba(14,16,24,0.98)"
+                        border={border}
+                        borderRadius="10px"
+                        maxW="420px"
+                        w="90vw"
+                        maxH="70vh"
+                        display="flex"
+                        flexDirection="column"
+                    >
+                        <Dialog.Header pb={2} flexShrink={0}>
+                            <Dialog.Title color="white" fontSize="sm" fontWeight="700">
+                                <HStack gap={2}>
+                                    <LuShoppingBasket size={16} color={ACCENT} />
+                                    <Text>Ressources totales</Text>
+                                    <Badge fontSize="10px" px="5px" bg={`${ACCENT}22`} color={ACCENT} borderRadius="4px">
+                                        {totalRawList.length} types
+                                    </Badge>
+                                </HStack>
+                            </Dialog.Title>
+                            <Dialog.CloseTrigger asChild>
+                                <CloseButton size="sm" color="whiteAlpha.500" _hover={{ color: "white" }} />
+                            </Dialog.CloseTrigger>
+                        </Dialog.Header>
+                        <Dialog.Body overflowY="auto" pb={4}>
+                            <VStack align="stretch" gap={1}>
+                                {totalRawList.map((res) => (
+                                    <HStack
+                                        key={`${res.iconId}-${res.name}`}
+                                        px={2}
+                                        py="6px"
+                                        borderRadius="6px"
+                                        _hover={{ bg: "rgba(255,255,255,0.04)" }}
+                                        gap={2}
+                                    >
+                                        <ItemIcon iconId={res.iconId} size={20} />
+                                        <Text fontSize="xs" color="white" flex={1} minW="0" truncate>
+                                            {res.name}
+                                        </Text>
+                                        <Text fontSize="12px" color={ACCENT} fontWeight="700" flexShrink={0} fontFamily="mono">
+                                            ×{res.qty}
+                                        </Text>
+                                    </HStack>
+                                ))}
+                            </VStack>
+                        </Dialog.Body>
+                    </Dialog.Content>
+                </Dialog.Positioner>
+            </Dialog.Root>
         </Flex>
     );
 }
